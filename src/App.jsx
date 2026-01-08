@@ -51,7 +51,7 @@ function App() {
               <Route path="validation" element={<Validation />} />
             </Route>
           </Routes>
-        </BrowserRouter>
+        </HashRouter>
       </InventoryProvider>
     </AuthProvider>
   );
