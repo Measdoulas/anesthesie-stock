@@ -33,7 +33,7 @@ function App() {
   return (
     <AuthProvider>
       <InventoryProvider>
-        <BrowserRouter basename={import.meta.env.BASE_URL}>
+        <HashRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
 
