@@ -26,8 +26,6 @@ const StockEntry = () => {
     // UI State
     const [successMsg, setSuccessMsg] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
-    const [successMsg, setSuccessMsg] = useState('');
-    const [errorMsg, setErrorMsg] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [expandedReceptionId, setExpandedReceptionId] = useState(null);
 
@@ -72,7 +70,7 @@ const StockEntry = () => {
         setCart(newCart);
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setErrorMsg('');
 
