@@ -248,6 +248,19 @@ h3 {
   font-weight: 600;
 }
 
+@media (max-width: 768px) {
+    .grid-responsive {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+.grid-responsive {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+    gap: 1.5rem;
+    align-items: start;
+}
+
 p {
   margin: 0;
   color: var(--text-secondary);

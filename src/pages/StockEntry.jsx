@@ -132,7 +132,7 @@ const StockEntry = () => {
                 </div>
             ) : (
                 user?.role === 'ANESTHESISTE' ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 0.8fr)', gap: '1.5rem', alignItems: 'start' }}>
+                    <div className="grid-responsive">
                         {/* Left: Input */}
                         <div className="flex-col gap-6">
                             <div className="card">

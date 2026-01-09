@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, Package, PlusCircle, MinusCircle, BarChart3, Activity, Settings, ShieldCheck, LogOut } from 'lucide-react';
+import { LayoutDashboard, Package, PlusCircle, MinusCircle, BarChart3, Activity, Settings, ShieldCheck, LogOut, ClipboardList } from 'lucide-react';
 
 const Sidebar = ({ isOpen }) => {
     const { user, logout } = useAuth();
@@ -18,6 +18,7 @@ const Sidebar = ({ isOpen }) => {
         { icon: PlusCircle, label: 'Entrées Stock', to: '/entry' },
         { icon: MinusCircle, label: 'Sorties Patient', to: '/exit' },
         { icon: BarChart3, label: 'Statistiques', to: '/stats' },
+        { icon: ClipboardList, label: 'Audit / Contrôle', to: '/audit' },
         { icon: Settings, label: 'Paramètres', to: '/settings' },
     ];
 

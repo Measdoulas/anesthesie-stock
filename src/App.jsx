@@ -11,6 +11,7 @@ import StockEntry from './pages/StockEntry';
 import StockExit from './pages/StockExit';
 import Statistics from './pages/Statistics';
 import Settings from './pages/Settings';
+import Audit from './pages/Audit';
 import Login from './pages/Login';
 import Validation from './pages/Validation';
 
@@ -48,6 +49,7 @@ function App() {
               <Route path="exit" element={<StockExit />} />
               <Route path="stats" element={<Statistics />} />
               <Route path="settings" element={<Settings />} />
+              <Route path="audit" element={<Audit />} />
               <Route path="validation" element={<Validation />} />
             </Route>
           </Routes>

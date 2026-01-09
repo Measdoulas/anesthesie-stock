@@ -41,8 +41,9 @@ export const AuthProvider = ({ children }) => {
       setUser({
         id: authUser.id,
         email: authUser.email,
-        role: data.role,
-        name: data.role === 'PHARMACIEN' ? 'Dr. Pharmacien' : 'Dr. Anesthésiste'
+        name: data.full_name || (data.role === 'PHARMACIEN' ? 'Dr. Pharmacien' : 'Dr. Anesthésiste'),
+        avatar_url: data.avatar_url,
+        role: data.role
       });
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -65,8 +66,32 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const updateProfile = async (updates) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setUser(prev => ({ ...prev, ...updates }));
+      return { success: true };
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw error;
+    }
+  };
+
+  const updatePassword = async (newPassword) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+    return { success: true };
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, listing: loading, updateProfile, updatePassword }}>
       {!loading && children}
     </AuthContext.Provider>
   );
