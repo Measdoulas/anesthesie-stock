@@ -157,8 +157,8 @@ const Inventory = () => {
                                         </div>
                                     </div>
 
-                                    {/* Pharmacist Delete Action */}
-                                    {user?.role === 'PHARMACIEN' && (
+                                    {/* Anesthetist Delete Action (Requested by User) */}
+                                    {user?.role === 'ANESTHESISTE' && (
                                         <button
                                             onClick={async () => {
                                                 if (window.confirm(`Voulez-vous vraiment supprimer ${med.name} ?`)) {

@@ -95,25 +95,71 @@ const Validation = () => {
             {/* Tabs */}
             {/* Premium Tabs */}
             {/* Premium Tabs */}
+            {/* Premium Tabs */}
             <div className="flex justify-center mb-8">
-                <div className="tab-container">
+                <div style={{
+                    background: 'rgba(30, 41, 59, 0.5)',
+                    padding: '0.4rem',
+                    borderRadius: '999px',
+                    display: 'inline-flex',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    gap: '0.5rem'
+                }}>
                     <button
                         onClick={() => setActiveTab('pending')}
-                        className={`tab-btn ${activeTab === 'pending' ? 'active-purple' : ''}`}
+                        style={{
+                            padding: '0.6rem 2rem',
+                            borderRadius: '999px',
+                            fontWeight: '700',
+                            fontSize: '0.9rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            border: 'none',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                            backgroundColor: activeTab === 'pending' ? '#a855f7' : 'transparent',
+                            color: activeTab === 'pending' ? 'white' : 'var(--text-secondary)',
+                            boxShadow: activeTab === 'pending' ? '0 4px 12px rgba(168, 85, 247, 0.4)' : 'none'
+                        }}
                     >
-                        <Clock size={16} />
+                        <Clock size={18} />
                         En Attente
                         {pendingReceptions.length > 0 && (
-                            <span className="bg-white text-purple text-xs px-1.5 rounded-md ml-1 font-extrabold">{pendingReceptions.length}</span>
+                            <span style={{
+                                backgroundColor: 'white',
+                                color: '#a855f7',
+                                fontSize: '0.75rem',
+                                padding: '0.1rem 0.5rem',
+                                borderRadius: '4px',
+                                marginLeft: '0.5rem',
+                                fontWeight: '800'
+                            }}>{pendingReceptions.length}</span>
                         )}
                     </button>
                     <button
                         onClick={() => setActiveTab('history')}
-                        className={`tab-btn ${activeTab === 'history' ? 'active-emerald' : ''}`}
+                        style={{
+                            padding: '0.6rem 2rem',
+                            borderRadius: '999px',
+                            fontWeight: '700',
+                            fontSize: '0.9rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            border: 'none',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                            backgroundColor: activeTab === 'history' ? '#10b981' : 'transparent',
+                            color: activeTab === 'history' ? 'white' : 'var(--text-secondary)',
+                            boxShadow: activeTab === 'history' ? '0 4px 12px rgba(16, 185, 129, 0.4)' : 'none'
+                        }}
                     >
-                        <CheckCircle size={16} />
+                        <CheckCircle size={18} />
                         Historique
-                        <span className="opacity-50 text-xs font-normal ml-1">({historyReceptions.length})</span>
+                        <span style={{ opacity: 0.6, fontSize: '0.75rem', fontWeight: '400', marginLeft: '0.25rem' }}>
+                            ({historyReceptions.length})
+                        </span>
                     </button>
                 </div>
             </div>
