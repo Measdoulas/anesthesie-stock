@@ -203,6 +203,38 @@ export const InventoryProvider = ({ children }) => {
         await fetchData();
     };
 
+    const saveAudit = async (auditData, summary) => {
+        // 1. Create Audit Record
+        const { data: audit, error: auditError } = await supabase
+            .from('audits')
+            .insert([{
+                user_id: user.id,
+                status: 'VALIDATED',
+                total_items: summary.totalItems,
+                discrepancy_count: summary.discrepancyCount
+            }])
+            .select()
+            .single();
+
+        if (auditError) throw auditError;
+
+        // 2. Create Audit Items
+        const itemsToInsert = auditData.map(item => ({
+            audit_id: audit.id,
+            med_id: item.id,
+            med_name: item.name,
+            theoretical_stock: item.stock,
+            physical_stock: item.physicalStock,
+            gap: item.gap,
+            comment: item.comment
+        }));
+
+        const { error: itemsError } = await supabase.from('audit_items').insert(itemsToInsert);
+        if (itemsError) throw itemsError;
+
+        return audit.id;
+    };
+
     // Backwards compatibility functions (aliases) - mapped to simple versions or errors
     const addStock = () => console.error("Use addStockBatch");
     const removeStock = () => console.error("Use removeStockBatch");
@@ -219,6 +251,7 @@ export const InventoryProvider = ({ children }) => {
             removeStockBatch,
             validateReception,
             invalidateReception, // New: Reject reception
+            saveAudit, // New: Save Inventory Audit
             deleteMedication, // Exposed for Pharmacist/Admin
             /* Legacy/Unused exposed to prevent crash if still called somewhere before cleanup */
             addStock,
