@@ -192,10 +192,10 @@ export const InventoryProvider = ({ children }) => {
     };
 
     const invalidateReception = async (receptionId) => {
-        // Delete pending transactions for this reception
+        // Soft delete: Update status to REJECTED for audit trail and robustness
         const { error } = await supabase
             .from('transactions')
-            .delete()
+            .update({ status: 'REJECTED' })
             .eq('receptionId', receptionId)
             .eq('status', 'PENDING');
 
