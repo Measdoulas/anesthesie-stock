@@ -12,6 +12,9 @@ const Audit = () => {
     const [auditData, setAuditData] = useState([]);
     const [filter, setFilter] = useState('');
 
+    const isPharmacist = user?.role === 'PHARMACIEN';
+
+
     useEffect(() => {
         // Initialize audit data only if empty to create a snapshot
         if (auditData.length === 0 && medications.length > 0) {
@@ -50,21 +53,41 @@ const Audit = () => {
         const date = format(new Date(), 'dd/MM/yyyy HH:mm');
 
         // Header
-        doc.setFontSize(20);
-        doc.text("Rapport d'Inventaire", 14, 22);
+        doc.setFontSize(22);
+        doc.setTextColor(44, 62, 80);
+        doc.text("RAPPORT D'INVENTAIRE", 105, 20, { align: "center" });
 
         doc.setFontSize(10);
-        doc.text(`Date: ${date}`, 14, 30);
-        doc.text(`Auditeur: ${user?.name || 'Inconnu'}`, 14, 35);
+        doc.setTextColor(100);
+        doc.text(`Généré le: ${date}`, 14, 30);
+        doc.text(`Auditeur: ${user?.name || 'Non spécifié'}`, 14, 35);
+        doc.text(`Statut: VALIDÉ`, 14, 40);
 
         // Summary Stats
         const totalItems = auditData.length;
         const discrepancies = auditData.filter(i => i.gap !== 0).length;
 
-        doc.text(`Total Références: ${totalItems}`, 14, 45);
-        doc.setTextColor(discrepancies > 0 ? 200 : 0, 0, 0);
-        doc.text(`Écarts constatés: ${discrepancies}`, 14, 50);
-        doc.setTextColor(0, 0, 0);
+        doc.setDrawColor(200);
+        doc.line(14, 45, 196, 45);
+
+        doc.setFontSize(12);
+        doc.setTextColor(0);
+        doc.text(`Total Références: ${totalItems}`, 14, 55);
+
+        if (discrepancies > 0) {
+            doc.setTextColor(231, 76, 60); // Red
+            doc.text(`Écarts constatés: ${discrepancies}`, 80, 55);
+        } else {
+            doc.setTextColor(46, 204, 113); // Green
+            doc.text(`Aucun écart constaté`, 80, 55);
+        }
+        doc.setTextColor(0);
+
+        // Footer Signature Area
+        const pageHeight = doc.internal.pageSize.height;
+        doc.setFontSize(10);
+        doc.text("Signature Pharmacien:", 14, pageHeight - 30);
+        doc.text("Signature Anesthésiste:", 120, pageHeight - 30);
 
         // Table
         const tableColumn = ["Médicament", "Lot", "Système", "Physique", "Écart", "Commentaire"];
@@ -120,13 +143,31 @@ const Audit = () => {
                     <p className="text-secondary">Comparaison Stocks Théoriques vs Physiques</p>
                 </div>
 
-                <button
-                    onClick={generatePDF}
-                    className="btn btn-primary"
-                    disabled={auditData.length === 0}
-                >
-                    <FileText size={20} /> Générer Rapport PDF
-                </button>
+                <div className="flex gap-2">
+                    {/* Validation Button (Pharmacist Only) */}
+                    {isPharmacist && (
+                        <button
+                            onClick={() => {
+                                if (window.confirm("Confirmer la validation de l'inventaire ? Cela générera le rapport officiel.")) {
+                                    generatePDF();
+                                    // Future: Save to database logs
+                                }
+                            }}
+                            className="btn btn-success"
+                            disabled={auditData.length === 0}
+                        >
+                            <CheckCircle size={20} /> Valider l'Inventaire
+                        </button>
+                    )}
+
+                    <button
+                        onClick={generatePDF}
+                        className="btn btn-primary"
+                        disabled={auditData.length === 0}
+                    >
+                        <FileText size={20} /> Aperçu PDF
+                    </button>
+                </div>
             </div>
 
             {/* Filter & Stats */}
@@ -196,6 +237,7 @@ const Audit = () => {
                                             value={item.physicalStock}
                                             onChange={(e) => handleStockChange(item.id, e.target.value)}
                                             min="0"
+                                            disabled={!isPharmacist}
                                         />
                                     </td>
                                     <td className="p-4 text-center font-bold">
@@ -207,9 +249,10 @@ const Audit = () => {
                                         <input
                                             type="text"
                                             className="input-field py-1 text-sm"
-                                            placeholder="Note op..."
+                                            placeholder={isPharmacist ? "Note..." : "-"}
                                             value={item.comment}
                                             onChange={(e) => handleCommentChange(item.id, e.target.value)}
+                                            disabled={!isPharmacist}
                                         />
                                     </td>
                                 </tr>

@@ -84,7 +84,8 @@ const StockEntry = () => {
                 supplier
             });
 
-            setSuccessMsg(`Réception enregistrée avec succès (ID: ${receptionId.slice(0, 8)})`);
+            const recIdStr = String(receptionId);
+            setSuccessMsg(`Réception enregistrée avec succès (ID: ${recIdStr.slice(0, 8)})`);
             setCart([]);
             setSupplier('');
 

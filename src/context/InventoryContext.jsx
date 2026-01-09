@@ -80,6 +80,11 @@ export const InventoryProvider = ({ children }) => {
         if (error) throw error;
     };
 
+    const deleteMedication = async (id) => {
+        const { error } = await supabase.from('medications').delete().eq('id', id);
+        if (error) throw error;
+    };
+
     const removeStockBatch = async (items, details) => {
         // items: array of { medId, quantity }
         // For atomic consistency, we ideally use a Stored Procedure or RPC.
@@ -201,6 +206,7 @@ export const InventoryProvider = ({ children }) => {
             addStockBatch,
             removeStockBatch,
             validateReception,
+            deleteMedication, // Exposed for Pharmacist/Admin
             /* Legacy/Unused exposed to prevent crash if still called somewhere before cleanup */
             addStock,
             removeStock,

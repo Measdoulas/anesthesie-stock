@@ -5,7 +5,7 @@ import { getStockStatus, getExpirationStatus, formatStockStatus } from '../utils
 import { Search, Plus, AlertTriangle, Syringe, Filter, Trash2 } from 'lucide-react';
 
 const Inventory = () => {
-    const { medications, addMedication } = useInventory();
+    const { medications, addMedication, deleteMedication } = useInventory();
     const { user } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
     const [showAddForm, setShowAddForm] = useState(false);
@@ -156,6 +156,26 @@ const Inventory = () => {
                                             <span className="font-medium text-sm">{label}</span>
                                         </div>
                                     </div>
+
+                                    {/* Pharmacist Delete Action */}
+                                    {user?.role === 'PHARMACIEN' && (
+                                        <button
+                                            onClick={async () => {
+                                                if (window.confirm(`Voulez-vous vraiment supprimer ${med.name} ?`)) {
+                                                    try {
+                                                        await deleteMedication(med.id);
+                                                    } catch (e) {
+                                                        alert("Erreur: " + e.message);
+                                                    }
+                                                }
+                                            }}
+                                            className="btn btn-danger"
+                                            style={{ padding: '0.5rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-danger)' }}
+                                            title="Supprimer définitivement"
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         );
