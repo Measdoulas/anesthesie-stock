@@ -1,284 +1,210 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { loadData, saveData } from '../services/storage';
+import { supabase } from '../supabaseClient';
+import { useAuth } from './AuthContext';
 
 const InventoryContext = createContext();
 
 export const useInventory = () => useContext(InventoryContext);
 
-const INITIAL_DATA = {
-    medications: [],
-    transactions: []
-};
-
 export const InventoryProvider = ({ children }) => {
-    const [data, setData] = useState(INITIAL_DATA);
+    const { user } = useAuth();
+    const [medications, setMedications] = useState([]);
+    const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    // Initial Fetch & Realtime Subscription
     useEffect(() => {
-        const loaded = loadData();
-        if (loaded) {
-            setData(loaded);
+        if (!user) {
+            setMedications([]);
+            setTransactions([]);
+            return;
         }
-        setLoading(false);
-    }, []);
 
-    useEffect(() => {
-        if (!loading) {
-            saveData(data);
-        }
-    }, [data, loading]);
+        const fetchData = async () => {
+            setLoading(true);
+            const [medsRes, transRes] = await Promise.all([
+                supabase.from('medications').select('*').order('name'),
+                supabase.from('transactions').select('*').order('created_at', { ascending: false })
+            ]);
 
-    const addMedication = (med) => {
-        const newMed = {
-            ...med,
-            id: crypto.randomUUID(),
-            createdAt: new Date().toISOString(),
-            stock: parseInt(med.stock) || 0
+            if (medsRes.data) setMedications(medsRes.data);
+            if (transRes.data) setTransactions(transRes.data);
+            setLoading(false);
         };
-        setData(prev => ({
-            ...prev,
-            medications: [...prev.medications, newMed]
-        }));
-    };
 
-    const updateMedication = (id, updates) => {
-        setData(prev => ({
-            ...prev,
-            medications: prev.medications.map(m => m.id === id ? { ...m, ...updates } : m)
-        }));
-    };
+        fetchData();
 
-    const addStock = (medId, quantity, expiryDate) => {
-        const qty = parseInt(quantity);
-        setData(prev => {
-            const med = prev.medications.find(m => m.id === medId);
-            if (!med) return prev;
-
-            const newStock = (med.stock || 0) + qty;
-            const updatedMed = { ...med, stock: newStock, expiry: expiryDate || med.expiry };
-
-            const transaction = {
-                id: crypto.randomUUID(),
-                medId,
-                medName: med.name,
-                type: 'IN',
-                quantity: qty,
-                date: new Date().toISOString(),
-                details: { expiryDate }
-            };
-
-            return {
-                medications: prev.medications.map(m => m.id === medId ? updatedMed : m),
-                transactions: [transaction, ...prev.transactions]
-            };
-        });
-    };
-
-    const removeStock = (medId, quantity, details) => {
-        const qty = parseInt(quantity);
-        setData(prev => {
-            const med = prev.medications.find(m => m.id === medId);
-            if (!med) return prev;
-
-            if (med.stock < qty) {
-                throw new Error("Stock insuffisant");
-            }
-
-            const newStock = med.stock - qty;
-            const updatedMed = { ...med, stock: newStock };
-
-            const transaction = {
-                id: crypto.randomUUID(),
-                medId,
-                medName: med.name,
-                type: 'OUT',
-                quantity: qty,
-                date: new Date().toISOString(),
-                details
-            };
-
-            return {
-                medications: prev.medications.map(m => m.id === medId ? updatedMed : m),
-                transactions: [transaction, ...prev.transactions]
-            };
-        });
-    };
-
-    const removeStockBatch = (items, details) => {
-        // items: array of { medId, quantity }
-        setData(prev => {
-            // 1. Validate all stocks first
-            const updates = [];
-            const newTransactions = [];
-
-            // We need a map of current stocks to handle multiple removals of same item if that happened (though UI prevents it usually)
-            const currentStocks = {};
-            prev.medications.forEach(m => currentStocks[m.id] = m.stock);
-
-            for (const item of items) {
-                const med = prev.medications.find(m => m.id === item.medId);
-                if (!med) throw new Error(`Médicament introuvable: ${item.medId}`);
-
-                const qty = parseInt(item.quantity);
-                if (currentStocks[item.medId] < qty) {
-                    throw new Error(`Stock insuffisant pour ${med.name} (Requis: ${qty}, Dispo: ${currentStocks[item.medId]})`);
+        // Realtime subscriptions
+        const medsSub = supabase
+            .channel('meds-channel')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'medications' }, (payload) => {
+                if (payload.eventType === 'INSERT') {
+                    setMedications(prev => [...prev, payload.new].sort((a, b) => a.name.localeCompare(b.name)));
+                } else if (payload.eventType === 'UPDATE') {
+                    setMedications(prev => prev.map(m => m.id === payload.new.id ? payload.new : m));
+                } else if (payload.eventType === 'DELETE') {
+                    setMedications(prev => prev.filter(m => m.id !== payload.old.id));
                 }
+            })
+            .subscribe();
 
-                currentStocks[item.medId] -= qty;
+        const transSub = supabase
+            .channel('trans-channel')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, (payload) => {
+                if (payload.eventType === 'INSERT') {
+                    setTransactions(prev => [payload.new, ...prev]);
+                } else if (payload.eventType === 'UPDATE') {
+                    setTransactions(prev => prev.map(t => t.id === payload.new.id ? payload.new : t));
+                }
+            })
+            .subscribe();
 
-                updates.push({ medId: item.medId, newStock: currentStocks[item.medId] });
-                newTransactions.push({
-                    id: crypto.randomUUID(),
-                    medId: item.medId,
-                    medName: med.name,
-                    type: 'OUT',
-                    quantity: qty,
-                    date: new Date().toISOString(),
-                    details
-                });
-            }
+        return () => {
+            medsSub.unsubscribe();
+            transSub.unsubscribe();
+        };
+    }, [user]);
 
-            // 2. Apply updates
-            const updatedMedications = prev.medications.map(m => {
-                const update = updates.find(u => u.medId === m.id);
-                return update ? { ...m, stock: update.newStock } : m;
-            });
-
-            return {
-                medications: updatedMedications,
-                transactions: [...newTransactions, ...prev.transactions]
-            };
-        });
+    const addMedication = async (med) => {
+        const { error } = await supabase.from('medications').insert([{
+            name: med.name,
+            stock: parseInt(med.stock) || 0,
+            isNarcotic: med.isNarcotic,
+            expiry: med.expiry || null // Optional for base med
+        }]);
+        if (error) throw error;
     };
 
-    const addStockBatch = (items, receptionDetails) => {
-        // items: array of { medId, quantity, expiryDate }
-        // receptionDetails: object with reception info (date, supplier, etc.) - optional
+    const updateMedication = async (id, updates) => {
+        const { error } = await supabase.from('medications').update(updates).eq('id', id);
+        if (error) throw error;
+    };
 
-        const receptionId = crypto.randomUUID();
-        const receptionDate = new Date().toISOString();
+    const removeStockBatch = async (items, details) => {
+        // items: array of { medId, quantity }
+        // For atomic consistency, we ideally use a Stored Procedure or RPC.
+        // For MVP, we'll do client-side sequence but be aware of race conditions (RLS helps a bit).
 
-        setData(prev => {
-            const updates = [];
-            const newTransactions = [];
+        // 1. Check stocks locally first for quick feedback (optional but good UX)
+        // 2. Insert OUT transactions
+        // 3. Update Stocks.
 
-            for (const item of items) {
-                const med = prev.medications.find(m => m.id === item.medId);
-                if (!med) continue; // Should catch error or skip? Skip safe.
+        // Note: In Supabase, it's safer to use an RPC for batch stock deduction to ensure no negative stock race condition.
+        // But let's keep it simple for now: Loop updates.
 
-                const qty = parseInt(item.quantity);
-                const newStock = (med.stock || 0) + qty; // Calculate new stock relative to CURRENT state in this loop?
-                // In a batch update on same item, we need to track cumulative changes.
-                // Use a temp map if we expect multiple entries for SAME med in one batch.
-                // For simplicity, assuming unique med per batch or simple increment works if we map correctly.
-                // Better: map previous meds to new stats.
+        const timestamp = new Date().toISOString();
+        const userId = user.id;
 
-                // Simpler approach compatible with state setter structure:
-                // We need to return the NEW complete state.
-
-                // 1. Prepare transactions
-                newTransactions.push({
-                    id: crypto.randomUUID(),
-                    medId: item.medId,
-                    medName: med.name,
-                    type: 'IN',
-                    quantity: qty,
-                    date: receptionDate,
-                    receptionId: receptionId,
-                    status: 'PENDING', // NEW: Waiting for validation
-                    details: {
-                        expiryDate: item.expiryDate,
-                        receptionId: receptionId,
-                        ...receptionDetails
-                    }
-                });
-            }
-
-            // 2. Update medications (accumulate stock changes)
-            // DO NOT update stock here anymore. It waits for validation.
-            // But we might want to update expiry date? 
-            // Better to update expiry only on validation to act as "Accepted into stock".
-            // So for now, we just add PENDING transactions.
-
-            // Wait, if we don't update stock, 'medications' array remains same.
-
+        // Prepare Transactions
+        const transactionRows = items.map(item => {
+            const med = medications.find(m => m.id === item.medId);
             return {
-                medications: prev.medications, // No change to stock yet
-                transactions: [...newTransactions, ...prev.transactions]
+                type: 'OUT',
+                medId: item.medId,
+                medName: med?.name || 'Unknown',
+                quantity: parseInt(item.quantity),
+                date: timestamp,
+                status: 'VALIDATED', // Direct exit
+                details: details,
+                userId: userId
             };
         });
+
+        const { error: transError } = await supabase.from('transactions').insert(transactionRows);
+        if (transError) throw transError;
+
+        // Update Stocks
+        for (const item of items) {
+            const med = medications.find(m => m.id === item.medId);
+            if (!med) continue;
+
+            const newStock = med.stock - parseInt(item.quantity);
+            // Optimistic check
+            if (newStock < 0) console.warn("Stock might be negative!");
+
+            await supabase.from('medications').update({ stock: newStock }).eq('id', item.medId);
+        }
+    };
+
+    const addStockBatch = async (items, receptionDetails) => {
+        const receptionId = crypto.randomUUID();
+        const timestamp = new Date().toISOString();
+        const userId = user.id;
+
+        const transactionRows = items.map(item => {
+            const med = medications.find(m => m.id === item.medId);
+            return {
+                type: 'IN',
+                medId: item.medId,
+                medName: med?.name || 'Unknown',
+                quantity: parseInt(item.quantity),
+                date: timestamp,
+                status: 'PENDING',
+                receptionId: receptionId,
+                details: {
+                    expiryDate: item.expiryDate,
+                    receptionId: receptionId,
+                    ...receptionDetails
+                },
+                userId: userId
+            };
+        });
+
+        const { error } = await supabase.from('transactions').insert(transactionRows);
+        if (error) throw error;
 
         return receptionId;
     };
 
-    const validateReception = (receptionId) => {
-        setData(prev => {
-            const updates = [];
+    const validateReception = async (receptionId) => {
+        // 1. Get pending transactions
+        const pending = transactions.filter(t => t.receptionId === receptionId && t.status === 'PENDING');
+        if (pending.length === 0) return;
 
-            // 1. Find pending transactions for this reception
-            const pendingTransactions = prev.transactions.filter(t =>
-                t.receptionId === receptionId && t.status === 'PENDING'
-            );
+        // 2. Update Stocks
+        for (const t of pending) {
+            const med = medications.find(m => m.id === t.medId);
+            if (!med) continue;
 
-            if (pendingTransactions.length === 0) return prev;
+            const qty = parseInt(t.quantity);
+            const newStock = (med.stock || 0) + qty;
+            // Update expiry if presents
+            const newExpiry = t.details?.expiryDate || med.expiry;
 
-            // 2. Calculate stock updates
-            const stockUpdates = {}; // medId -> quantityToAdd
-
-            pendingTransactions.forEach(t => {
-                stockUpdates[t.medId] = (stockUpdates[t.medId] || 0) + parseInt(t.quantity);
-            });
-
-            // 3. Update medications
-            const updatedMedications = prev.medications.map(med => {
-                if (stockUpdates[med.id]) {
-                    const newStock = (med.stock || 0) + stockUpdates[med.id];
-                    // Also update expiry? Assuming the validated med is the 'freshest', we could update it.
-                    // Ideally we'd grab the expiry from the transaction details.
-                    // Simple logic: update expiry if present in transaction.
-                    // Getting expiry from ONE of the transactions for this med (usually just one per batch per med)
-                    const relevantTrans = pendingTransactions.find(t => t.medId === med.id);
-                    const newExpiry = relevantTrans?.details?.expiryDate || med.expiry;
-
-                    return { ...med, stock: newStock, expiry: newExpiry };
-                }
-                return med;
-            });
-
-            // 4. Update transactions status
-            const updatedTransactions = prev.transactions.map(t => {
-                if (t.receptionId === receptionId && t.status === 'PENDING') {
-                    return { ...t, status: 'VALIDATED' };
-                }
-                return t;
-            });
-
-            return {
-                medications: updatedMedications,
-                transactions: updatedTransactions
-            };
-        });
-    };
-
-    const clearData = () => {
-        if (window.confirm("Êtes-vous sûr de vouloir tout effacer ? Cette action est irréversible.")) {
-            setData(INITIAL_DATA);
+            await supabase.from('medications').update({
+                stock: newStock,
+                expiry: newExpiry
+            }).eq('id', t.medId);
         }
+
+        // 3. Mark transactions as VALIDATED
+        const { error } = await supabase
+            .from('transactions')
+            .update({ status: 'VALIDATED' })
+            .eq('receptionId', receptionId);
+
+        if (error) throw error;
     };
+
+    // Backwards compatibility functions (aliases) - mapped to simple versions or errors
+    const addStock = () => console.error("Use addStockBatch");
+    const removeStock = () => console.error("Use removeStockBatch");
+    const clearData = () => alert("Fonction réservée à l'admin DB maintenant.");
 
     return (
         <InventoryContext.Provider value={{
-            medications: data.medications,
-            transactions: data.transactions,
+            medications,
+            transactions,
+            loading,
             addMedication,
             updateMedication,
-            addStock,
             addStockBatch,
-            validateReception,
-            removeStock,
             removeStockBatch,
-            clearData,
-            loading
+            validateReception,
+            /* Legacy/Unused exposed to prevent crash if still called somewhere before cleanup */
+            addStock,
+            removeStock,
+            clearData
         }}>
             {children}
         </InventoryContext.Provider>

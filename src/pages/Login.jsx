@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { User, ShieldCheck, Activity } from 'lucide-react';
@@ -6,10 +6,24 @@ import { User, ShieldCheck, Activity } from 'lucide-react';
 const Login = () => {
     const { login } = useAuth();
     const navigate = useNavigate();
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
-    const handleLogin = (role) => {
-        login(role);
-        navigate('/');
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        setLoading(true);
+        try {
+            await login(email, password);
+            navigate('/');
+        } catch (err) {
+            setError('Échec de la connexion. Vérifiez vos identifiants.');
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -25,52 +39,58 @@ const Login = () => {
             </div>
 
             <div className="card animate-enter" style={{ maxWidth: '400px', width: '100%', padding: '2rem' }}>
-                <h2 className="text-center mb-6">Identification</h2>
+                <h2 className="text-center mb-6">Connexion Sécurisée</h2>
 
-                <div className="flex-col gap-4">
-                    <button
-                        onClick={() => handleLogin('ANESTHESISTE')}
-                        className="btn"
-                        style={{
-                            justifyContent: 'flex-start',
-                            padding: '1.25rem',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            backgroundColor: 'rgba(255,255,255,0.02)',
-                            transition: 'all 0.2s ease'
-                        }}
-                    >
-                        <div className="bg-blue-light p-2 rounded-full mr-4">
-                            <User size={24} className="text-blue" />
+                {error && (
+                    <div className="bg-red-900/30 text-red-200 p-3 rounded mb-4 text-sm text-center border border-red-800">
+                        {error}
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="flex-col gap-4">
+                    <div>
+                        <label className="text-sm font-bold text-secondary uppercase mb-1 block">Email</label>
+                        <div className="relative">
+                            <User size={18} className="absolute left-3 top-3 text-secondary" />
+                            <input
+                                type="email"
+                                required
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="input-field pl-10"
+                                placeholder="nom@hopital.com"
+                                style={{ paddingLeft: '2.5rem' }}
+                            />
                         </div>
-                        <div className="text-left">
-                            <div className="font-bold">Anesthésiste</div>
-                            <div className="text-xs text-secondary">Gestion Stock & Sorties</div>
+                    </div>
+
+                    <div>
+                        <label className="text-sm font-bold text-secondary uppercase mb-1 block">Mot de passe</label>
+                        <div className="relative">
+                            <ShieldCheck size={18} className="absolute left-3 top-3 text-secondary" />
+                            <input
+                                type="password"
+                                required
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="input-field pl-10"
+                                placeholder="••••••••"
+                                style={{ paddingLeft: '2.5rem' }}
+                            />
                         </div>
-                    </button>
+                    </div>
 
                     <button
-                        onClick={() => handleLogin('PHARMACIEN')}
-                        className="btn"
-                        style={{
-                            justifyContent: 'flex-start',
-                            padding: '1.25rem',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            backgroundColor: 'rgba(255,255,255,0.02)',
-                            transition: 'all 0.2s ease'
-                        }}
+                        type="submit"
+                        disabled={loading}
+                        className="btn btn-primary w-full mt-2"
                     >
-                        <div className="bg-purple-light p-2 rounded-full mr-4">
-                            <ShieldCheck size={24} className="text-purple" />
-                        </div>
-                        <div className="text-left">
-                            <div className="font-bold">Pharmacien</div>
-                            <div className="text-xs text-secondary">Réception & Validation</div>
-                        </div>
+                        {loading ? 'Connexion...' : 'Se connecter'}
                     </button>
-                </div>
+                </form>
 
                 <div className="text-center mt-6 text-xs text-secondary">
-                    <p>Accès sécurisé réservé au personnel autorisé.</p>
+                    <p>Accès restreint aux professionnels de santé.</p>
                 </div>
             </div>
         </div>
