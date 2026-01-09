@@ -13,7 +13,7 @@ const Validation = () => {
     // Group PENDING transactions
     const pendingReceptions = React.useMemo(() => {
         const receptions = {};
-        transactions.filter(t => t.status === 'PENDING').forEach(t => {
+        transactions.filter(t => t.status === 'PENDING' && t.type === 'IN').forEach(t => {
             const recId = t.receptionId;
             if (!receptions[recId]) {
                 receptions[recId] = {
@@ -94,14 +94,12 @@ const Validation = () => {
 
             {/* Tabs */}
             {/* Premium Tabs */}
+            {/* Premium Tabs */}
             <div className="flex justify-center mb-8">
-                <div className="bg-slate-800/50 p-1 rounded-full inline-flex border border-white/5">
+                <div className="tab-container">
                     <button
                         onClick={() => setActiveTab('pending')}
-                        className={`px-6 py-2 rounded-full font-bold text-sm transition-all duration-300 flex items-center gap-2 ${activeTab === 'pending'
-                                ? 'bg-purple text-white shadow-lg shadow-purple/20'
-                                : 'text-secondary hover:text-white hover:bg-white/5'
-                            }`}
+                        className={`tab-btn ${activeTab === 'pending' ? 'active-purple' : ''}`}
                     >
                         <Clock size={16} />
                         En Attente
@@ -111,10 +109,7 @@ const Validation = () => {
                     </button>
                     <button
                         onClick={() => setActiveTab('history')}
-                        className={`px-6 py-2 rounded-full font-bold text-sm transition-all duration-300 flex items-center gap-2 ${activeTab === 'history'
-                                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald/20'
-                                : 'text-secondary hover:text-white hover:bg-white/5'
-                            }`}
+                        className={`tab-btn ${activeTab === 'history' ? 'active-emerald' : ''}`}
                     >
                         <CheckCircle size={16} />
                         Historique
@@ -155,7 +150,7 @@ const Validation = () => {
                                         <div className="flex gap-2">
                                             <button
                                                 onClick={() => handleInvalidate(reception.id)}
-                                                className="btn btn-danger hover:bg-red-500/20 text-red-500 border border-red-500/30"
+                                                className="btn btn-danger"
                                                 title="Refuser / Supprimer"
                                             >
                                                 <XCircle size={20} />
