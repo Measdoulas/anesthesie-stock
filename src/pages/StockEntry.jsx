@@ -26,6 +26,9 @@ const StockEntry = () => {
     // UI State
     const [successMsg, setSuccessMsg] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
+    const [successMsg, setSuccessMsg] = useState('');
+    const [errorMsg, setErrorMsg] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [expandedReceptionId, setExpandedReceptionId] = useState(null);
 
     const selectedMed = medications.find(m => m.id === selectedMedId);
@@ -78,8 +81,10 @@ const StockEntry = () => {
             return;
         }
 
+        setIsSubmitting(true);
+
         try {
-            const receptionId = addStockBatch(cart, {
+            const receptionId = await addStockBatch(cart, {
                 receptionDate,
                 supplier
             });
@@ -93,6 +98,8 @@ const StockEntry = () => {
             setTimeout(() => setSuccessMsg(''), 3000);
         } catch (err) {
             setErrorMsg("Erreur lors de l'enregistrement: " + err.message);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -258,11 +265,15 @@ const StockEntry = () => {
 
                             <button
                                 onClick={handleSubmit}
-                                disabled={cart.length === 0}
+                                disabled={cart.length === 0 || isSubmitting}
                                 className="btn btn-primary w-full"
-                                style={{ opacity: cart.length === 0 ? 0.5 : 1 }}
+                                style={{ opacity: (cart.length === 0 || isSubmitting) ? 0.5 : 1 }}
                             >
-                                <Save size={20} /> Valider Réception
+                                {isSubmitting ? (
+                                    <span className="flex-center gap-2"><Clock size={18} className="animate-spin" /> Envoi...</span>
+                                ) : (
+                                    <span className="flex-center gap-2"><Save size={20} /> Valider Réception</span>
+                                )}
                             </button>
                         </div>
                     </div>

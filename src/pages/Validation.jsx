@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useInventory } from '../context/InventoryContext';
-import { ShieldCheck, Package, Clock, CheckCircle, AlertCircle, Calendar } from 'lucide-react';
+import { ShieldCheck, Package, Clock, CheckCircle, AlertCircle, Calendar, XCircle, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 const Validation = () => {
-    const { transactions, validateReception } = useInventory();
+    const { transactions, validateReception, invalidateReception } = useInventory();
     const [successMsg, setSuccessMsg] = useState('');
+    const [errorMsg, setErrorMsg] = useState('');
     const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'history'
 
     // Group PENDING transactions
@@ -46,11 +47,29 @@ const Validation = () => {
         return Object.values(receptions).sort((a, b) => new Date(b.date) - new Date(a.date));
     }, [transactions]);
 
-    const handleValidate = (receptionId) => {
+    const handleValidate = async (receptionId) => {
         if (window.confirm("Confirmer la validation et l'entrée en stock de cette commande ?")) {
-            validateReception(receptionId);
-            setSuccessMsg("Réception validée et stock mis à jour !");
-            setTimeout(() => setSuccessMsg(''), 3000);
+            try {
+                await validateReception(receptionId);
+                setSuccessMsg("Réception validée et stock mis à jour !");
+                setErrorMsg('');
+                setTimeout(() => setSuccessMsg(''), 3000);
+            } catch (err) {
+                setErrorMsg("Erreur validation: " + err.message);
+            }
+        }
+    };
+
+    const handleInvalidate = async (receptionId) => {
+        if (window.confirm("ATTENTION: Voulez-vous vraiment REFUSER cette réception ?\nElle sera supprimée définitivement.")) {
+            try {
+                await invalidateReception(receptionId);
+                setSuccessMsg("Réception refusée et supprimée.");
+                setErrorMsg('');
+                setTimeout(() => setSuccessMsg(''), 3000);
+            } catch (err) {
+                setErrorMsg("Erreur refus: " + err.message);
+            }
         }
     };
 
@@ -74,21 +93,34 @@ const Validation = () => {
             )}
 
             {/* Tabs */}
-            <div className="flex gap-4 mb-6 border-b border-white/10 pb-1">
-                <button
-                    onClick={() => setActiveTab('pending')}
-                    className={`pb-3 px-4 font-bold transition-colors relative ${activeTab === 'pending' ? 'text-purple' : 'text-secondary hover:text-white'}`}
-                >
-                    En Attente ({pendingReceptions.length})
-                    {activeTab === 'pending' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-purple"></div>}
-                </button>
-                <button
-                    onClick={() => setActiveTab('history')}
-                    className={`pb-3 px-4 font-bold transition-colors relative ${activeTab === 'history' ? 'text-purple' : 'text-secondary hover:text-white'}`}
-                >
-                    Historique Validé
-                    {activeTab === 'history' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-purple"></div>}
-                </button>
+            {/* Premium Tabs */}
+            <div className="flex justify-center mb-8">
+                <div className="bg-slate-800/50 p-1 rounded-full inline-flex border border-white/5">
+                    <button
+                        onClick={() => setActiveTab('pending')}
+                        className={`px-6 py-2 rounded-full font-bold text-sm transition-all duration-300 flex items-center gap-2 ${activeTab === 'pending'
+                                ? 'bg-purple text-white shadow-lg shadow-purple/20'
+                                : 'text-secondary hover:text-white hover:bg-white/5'
+                            }`}
+                    >
+                        <Clock size={16} />
+                        En Attente
+                        {pendingReceptions.length > 0 && (
+                            <span className="bg-white text-purple text-xs px-1.5 rounded-md ml-1 font-extrabold">{pendingReceptions.length}</span>
+                        )}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('history')}
+                        className={`px-6 py-2 rounded-full font-bold text-sm transition-all duration-300 flex items-center gap-2 ${activeTab === 'history'
+                                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald/20'
+                                : 'text-secondary hover:text-white hover:bg-white/5'
+                            }`}
+                    >
+                        <CheckCircle size={16} />
+                        Historique
+                        <span className="opacity-50 text-xs font-normal ml-1">({historyReceptions.length})</span>
+                    </button>
+                </div>
             </div>
 
             {activeTab === 'pending' ? (
@@ -120,14 +152,23 @@ const Validation = () => {
                                         </div>
                                     </div>
                                     <div>
-                                        <button
-                                            onClick={() => handleValidate(reception.id)}
-                                            className="btn btn-primary bg-purple hover:bg-purple-600 border-purple-500"
-                                            style={{ padding: '0.75rem 1.5rem' }}
-                                        >
-                                            <CheckCircle size={20} className="mr-2" />
-                                            Valider Entrée
-                                        </button>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => handleInvalidate(reception.id)}
+                                                className="btn btn-danger hover:bg-red-500/20 text-red-500 border border-red-500/30"
+                                                title="Refuser / Supprimer"
+                                            >
+                                                <XCircle size={20} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleValidate(reception.id)}
+                                                className="btn btn-primary bg-purple hover:bg-purple-600 border-purple-500"
+                                                style={{ padding: '0.75rem 1.5rem' }}
+                                            >
+                                                <CheckCircle size={20} className="mr-2" />
+                                                Valider Entrée
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
 

@@ -187,6 +187,19 @@ export const InventoryProvider = ({ children }) => {
             .eq('receptionId', receptionId);
 
         if (error) throw error;
+        if (error) throw error;
+        await fetchData();
+    };
+
+    const invalidateReception = async (receptionId) => {
+        // Delete pending transactions for this reception
+        const { error } = await supabase
+            .from('transactions')
+            .delete()
+            .eq('receptionId', receptionId)
+            .eq('status', 'PENDING');
+
+        if (error) throw error;
         await fetchData();
     };
 
@@ -205,6 +218,7 @@ export const InventoryProvider = ({ children }) => {
             addStockBatch,
             removeStockBatch,
             validateReception,
+            invalidateReception, // New: Reject reception
             deleteMedication, // Exposed for Pharmacist/Admin
             /* Legacy/Unused exposed to prevent crash if still called somewhere before cleanup */
             addStock,
