@@ -12,6 +12,20 @@ export const InventoryProvider = ({ children }) => {
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    // Move fetchData outside to be reusable
+    const fetchData = async () => {
+        // Don't set loading to true here to avoid UI flicker on background refresh
+        // setLoading(true); 
+        const [medsRes, transRes] = await Promise.all([
+            supabase.from('medications').select('*').order('name'),
+            supabase.from('transactions').select('*').order('created_at', { ascending: false })
+        ]);
+
+        if (medsRes.data) setMedications(medsRes.data);
+        if (transRes.data) setTransactions(transRes.data);
+        setLoading(false);
+    };
+
     // Initial Fetch & Realtime Subscription
     useEffect(() => {
         if (!user) {
@@ -20,42 +34,21 @@ export const InventoryProvider = ({ children }) => {
             return;
         }
 
-        const fetchData = async () => {
-            setLoading(true);
-            const [medsRes, transRes] = await Promise.all([
-                supabase.from('medications').select('*').order('name'),
-                supabase.from('transactions').select('*').order('created_at', { ascending: false })
-            ]);
-
-            if (medsRes.data) setMedications(medsRes.data);
-            if (transRes.data) setTransactions(transRes.data);
-            setLoading(false);
-        };
-
+        setLoading(true); // Set loading only on mount
         fetchData();
 
         // Realtime subscriptions
         const medsSub = supabase
             .channel('meds-channel')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'medications' }, (payload) => {
-                if (payload.eventType === 'INSERT') {
-                    setMedications(prev => [...prev, payload.new].sort((a, b) => a.name.localeCompare(b.name)));
-                } else if (payload.eventType === 'UPDATE') {
-                    setMedications(prev => prev.map(m => m.id === payload.new.id ? payload.new : m));
-                } else if (payload.eventType === 'DELETE') {
-                    setMedications(prev => prev.filter(m => m.id !== payload.old.id));
-                }
+                fetchData(); // Simplest robust strategy: Refetch all on change
             })
             .subscribe();
 
         const transSub = supabase
             .channel('trans-channel')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, (payload) => {
-                if (payload.eventType === 'INSERT') {
-                    setTransactions(prev => [payload.new, ...prev]);
-                } else if (payload.eventType === 'UPDATE') {
-                    setTransactions(prev => prev.map(t => t.id === payload.new.id ? payload.new : t));
-                }
+                fetchData(); // Simplest robust strategy: Refetch all on change
             })
             .subscribe();
 
@@ -73,16 +66,19 @@ export const InventoryProvider = ({ children }) => {
             expiry: med.expiry || null // Optional for base med
         }]);
         if (error) throw error;
+        await fetchData();
     };
 
     const updateMedication = async (id, updates) => {
         const { error } = await supabase.from('medications').update(updates).eq('id', id);
         if (error) throw error;
+        await fetchData();
     };
 
     const deleteMedication = async (id) => {
         const { error } = await supabase.from('medications').delete().eq('id', id);
         if (error) throw error;
+        await fetchData();
     };
 
     const removeStockBatch = async (items, details) => {
@@ -129,6 +125,7 @@ export const InventoryProvider = ({ children }) => {
 
             await supabase.from('medications').update({ stock: newStock }).eq('id', item.medId);
         }
+        await fetchData();
     };
 
     const addStockBatch = async (items, receptionDetails) => {
@@ -158,6 +155,7 @@ export const InventoryProvider = ({ children }) => {
         const { error } = await supabase.from('transactions').insert(transactionRows);
         if (error) throw error;
 
+        await fetchData();
         return receptionId;
     };
 
@@ -189,6 +187,7 @@ export const InventoryProvider = ({ children }) => {
             .eq('receptionId', receptionId);
 
         if (error) throw error;
+        await fetchData();
     };
 
     // Backwards compatibility functions (aliases) - mapped to simple versions or errors

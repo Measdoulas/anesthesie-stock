@@ -58,6 +58,11 @@ export const AuthProvider = ({ children }) => {
       password,
     });
     if (error) throw error;
+
+    // Immediate profile fetch to update state before navigation
+    if (data.session) {
+      await fetchProfile(data.session.user);
+    }
     return data;
   };
 
