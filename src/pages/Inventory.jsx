@@ -2,13 +2,18 @@ import React, { useState } from 'react';
 import { useInventory } from '../context/InventoryContext';
 import { useAuth } from '../context/AuthContext';
 import { getStockStatus, getExpirationStatus, formatStockStatus } from '../utils/alerts';
-import { Search, Plus, AlertTriangle, Syringe, Filter, Trash2 } from 'lucide-react';
+import { Search, Plus, AlertTriangle, Syringe, Filter, Trash2, X } from 'lucide-react';
 
 const Inventory = () => {
-    const { medications, addMedication, deleteMedication } = useInventory();
+    const { medications, addMedication, deleteMedication, reportIncident } = useInventory();
     const { user } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
     const [showAddForm, setShowAddForm] = useState(false);
+
+    // Incident Modal State
+    const [showIncidentModal, setShowIncidentModal] = useState(false);
+    const [selectedMedForIncident, setSelectedMedForIncident] = useState(null);
+    const [incidentData, setIncidentData] = useState({ quantity: 1, reason: 'Casse', comment: '' });
 
     // Form State
     const [newMed, setNewMed] = useState({ name: '', stock: 0, isNarcotic: false, expiry: '' });
@@ -21,12 +26,30 @@ const Inventory = () => {
         setNewMed({ name: '', stock: 0, isNarcotic: false, expiry: '' });
     };
 
+    const openIncidentModal = (med) => {
+        setSelectedMedForIncident(med);
+        setIncidentData({ quantity: 1, reason: 'Casse', comment: '' });
+        setShowIncidentModal(true);
+    };
+
+    const submitIncident = async (e) => {
+        e.preventDefault();
+        if (!selectedMedForIncident) return;
+        try {
+            await reportIncident(selectedMedForIncident.id, incidentData.quantity, incidentData.reason, incidentData.comment);
+            alert("Incident signalé. En attente de validation pharmacien.");
+            setShowIncidentModal(false);
+        } catch (error) {
+            alert("Erreur: " + error.message);
+        }
+    };
+
     const filteredMeds = medications.filter(m =>
         m.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
-        <div className="animate-enter" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div className="animate-enter" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', position: 'relative' }}>
             <div className="flex-between" style={{ alignItems: 'flex-start' }}>
                 <div>
                     <h2 style={{ marginBottom: '0.5rem' }}>Inventaire</h2>
@@ -42,6 +65,7 @@ const Inventory = () => {
                 )}
             </div>
 
+            {/* Add Medication Form */}
             {showAddForm && (
                 <div className="card animate-enter" style={{ borderLeft: '4px solid var(--accent-primary)' }}>
                     <h3 className="mb-4">Ajouter un nouveau médicament</h3>
@@ -86,6 +110,7 @@ const Inventory = () => {
                 </div>
             )}
 
+            {/* Search Bar */}
             <div className="card" style={{ padding: '0.75rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <Search className="text-secondary" size={20} style={{ color: 'var(--text-secondary)' }} />
                 <input
@@ -99,6 +124,7 @@ const Inventory = () => {
                 <Filter className="text-secondary" size={20} style={{ color: 'var(--text-secondary)' }} />
             </div>
 
+            {/* Medication List */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {filteredMeds.length === 0 ? (
                     <div className="text-center" style={{ padding: '3rem', border: '2px dashed rgba(255,255,255,0.1)', borderRadius: 'var(--radius-md)' }}>
@@ -108,11 +134,8 @@ const Inventory = () => {
                 ) : (
                     filteredMeds.map(med => {
                         const stockStatus = getStockStatus(med.stock);
-                        const { label, color, badge } = formatStockStatus(stockStatus); // WARNING: These return Tailwind classes (e.g., text-danger). We need to map them or rely on them matching our CSS.
-                        // Since we defined .text-danger, .bg-red-500/10 (NO we didn't define exact tailwind opacity classes). 
-                        // We need to fix `formatStockStatus` or manually override here.
+                        const { label, color, badge } = formatStockStatus(stockStatus);
 
-                        // Let's manually handle colors here for safety or update alerts.js later. I will use helper styles.
                         let statusColor = 'var(--text-secondary)';
                         let statusBg = 'rgba(255,255,255,0.05)';
 
@@ -157,31 +180,110 @@ const Inventory = () => {
                                         </div>
                                     </div>
 
-                                    {/* Anesthetist Delete Action (Requested by User) */}
-                                    {user?.role === 'ANESTHESISTE' && (
-                                        <button
-                                            onClick={async () => {
-                                                if (window.confirm(`Voulez-vous vraiment supprimer ${med.name} ?`)) {
-                                                    try {
-                                                        await deleteMedication(med.id);
-                                                    } catch (e) {
-                                                        alert("Erreur: " + e.message);
+                                    {/* Action Buttons */}
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        {/* Report Incident (Anesthetist Only) */}
+                                        {user?.role === 'ANESTHESISTE' && (
+                                            <button
+                                                onClick={() => openIncidentModal(med)}
+                                                className="btn"
+                                                style={{ padding: '0.5rem', backgroundColor: 'rgba(245, 158, 11, 0.1)', color: 'var(--accent-warning)', border: '1px solid rgba(245, 158, 11, 0.2)' }}
+                                                title="Signaler une avarie / péremption"
+                                            >
+                                                <AlertTriangle size={18} />
+                                            </button>
+                                        )}
+
+                                        {/* Delete (Anesthetist Only as per request) */}
+                                        {user?.role === 'ANESTHESISTE' && (
+                                            <button
+                                                onClick={async () => {
+                                                    if (window.confirm(`Voulez-vous vraiment supprimer ${med.name} ?`)) {
+                                                        try { await deleteMedication(med.id); } catch (e) { alert("Erreur: " + e.message); }
                                                     }
-                                                }
-                                            }}
-                                            className="btn btn-danger"
-                                            style={{ padding: '0.5rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-danger)' }}
-                                            title="Supprimer définitivement"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    )}
+                                                }}
+                                                className="btn btn-danger"
+                                                style={{ padding: '0.5rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-danger)' }}
+                                                title="Supprimer définitivement"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         );
                     })
                 )}
             </div>
+
+            {/* Incident Modal Overlay */}
+            {showIncidentModal && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    zIndex: 9999
+                }}>
+                    <div className="card animate-enter" style={{ width: '400px', padding: '1.5rem', border: '1px solid var(--accent-warning)' }}>
+                        <div className="flex-between" style={{ marginBottom: '1.5rem' }}>
+                            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-warning)' }}>
+                                <AlertTriangle size={24} /> Signaler un Incident
+                            </h3>
+                            <button onClick={() => setShowIncidentModal(false)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <p style={{ marginBottom: '1rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                            Vous signalez un problème pour : <strong style={{ color: 'white' }}>{selectedMedForIncident?.name}</strong>
+                        </p>
+
+                        <form onSubmit={submitIncident} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div>
+                                <label className="text-sm font-medium mb-1 block">Raison</label>
+                                <select
+                                    className="input-field"
+                                    value={incidentData.reason}
+                                    onChange={e => setIncidentData({ ...incidentData, reason: e.target.value })}
+                                >
+                                    <option value="Casse">Casse (Ampoule/Flacon)</option>
+                                    <option value="Périmé">Lot Périmé</option>
+                                    <option value="Perte">Perte inexpliquée</option>
+                                    <option value="Autre">Autre défaut</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="text-sm font-medium mb-1 block">Quantité impactée</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max={selectedMedForIncident?.stock || 999}
+                                    className="input-field"
+                                    value={incidentData.quantity}
+                                    onChange={e => setIncidentData({ ...incidentData, quantity: e.target.value })}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-sm font-medium mb-1 block">Commentaire (Facultatif)</label>
+                                <textarea
+                                    className="input-field"
+                                    rows="2"
+                                    value={incidentData.comment}
+                                    onChange={e => setIncidentData({ ...incidentData, comment: e.target.value })}
+                                    placeholder="Détails supplémentaires..."
+                                ></textarea>
+                            </div>
+
+                            <button type="submit" className="btn btn-warning" style={{ marginTop: '0.5rem', width: '100%', justifyContent: 'center' }}>
+                                Signaler au Pharmacien
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

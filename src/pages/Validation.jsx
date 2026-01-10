@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import { useInventory } from '../context/InventoryContext';
-import { ShieldCheck, Package, Clock, CheckCircle, AlertCircle, Calendar, XCircle, Trash2 } from 'lucide-react';
+import { ShieldCheck, Package, Clock, CheckCircle, AlertCircle, Calendar, XCircle, Trash2, AlertTriangle, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 const Validation = () => {
-    const { transactions, validateReception, invalidateReception } = useInventory();
+    const { transactions, validateReception, invalidateReception, validateIncident } = useInventory();
     const [successMsg, setSuccessMsg] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
-    const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'history'
+    const [activeTab, setActiveTab] = useState('pending'); // 'pending', 'incidents', 'history'
 
-    // Group PENDING transactions
+    // Group PENDING transactions (Receptions)
     const pendingReceptions = React.useMemo(() => {
         const receptions = {};
         transactions.filter(t => t.status === 'PENDING' && t.type === 'IN').forEach(t => {
@@ -26,6 +26,12 @@ const Validation = () => {
             receptions[recId].items.push(t);
         });
         return Object.values(receptions).sort((a, b) => new Date(a.date) - new Date(b.date));
+    }, [transactions]);
+
+    // Pending Incidents (Defective/Expired)
+    const pendingIncidents = React.useMemo(() => {
+        return transactions.filter(t => t.status === 'PENDING' && t.category === 'INCIDENT')
+            .sort((a, b) => new Date(b.date) - new Date(a.date));
     }, [transactions]);
 
     // Group VALIDATED transactions (History)
@@ -73,6 +79,57 @@ const Validation = () => {
         }
     };
 
+    const handleIncidentAction = async (id, action) => {
+        const confirmMsg = action === 'VALIDATE'
+            ? "Confirmer la perte ? Ce stock sera déduit définitivement."
+            : "Rejeter le signalement ? Le stock ne sera pas modifié.";
+
+        if (window.confirm(confirmMsg)) {
+            try {
+                await validateIncident(id, action);
+                setSuccessMsg(action === 'VALIDATE' ? "Incident validé (Stock déduit)" : "Incident rejeté");
+                setTimeout(() => setSuccessMsg(''), 3000);
+            } catch (err) {
+                setErrorMsg("Erreur: " + err.message);
+            }
+        }
+    };
+
+    const TabButton = ({ id, label, icon: Icon, color, count }) => (
+        <button
+            onClick={() => setActiveTab(id)}
+            style={{
+                padding: '0.6rem 1.5rem',
+                borderRadius: '999px',
+                fontWeight: '700',
+                fontSize: '0.9rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                backgroundColor: activeTab === id ? color : 'transparent',
+                color: activeTab === id ? 'white' : 'var(--text-secondary)',
+                boxShadow: activeTab === id ? `0 4px 12px ${color}66` : 'none' // Hex transparency hack
+            }}
+        >
+            <Icon size={18} />
+            {label}
+            {count !== undefined && count > 0 && (
+                <span style={{
+                    backgroundColor: 'white',
+                    color: color,
+                    fontSize: '0.75rem',
+                    padding: '0.1rem 0.5rem',
+                    borderRadius: '4px',
+                    marginLeft: '0.5rem',
+                    fontWeight: '800'
+                }}>{count}</span>
+            )}
+        </button>
+    );
+
     return (
         <div className="animate-enter" style={{ maxWidth: '900px', margin: '0 auto' }}>
             <div className="text-center mb-8">
@@ -82,7 +139,7 @@ const Validation = () => {
                 <h2 className="logo-text" style={{ fontSize: '2rem' }}>
                     Validation Pharmacien
                 </h2>
-                <p>Contrôle des réceptions et historique</p>
+                <p>Contrôle des réceptions et gestion des incidents</p>
             </div>
 
             {successMsg && (
@@ -91,10 +148,13 @@ const Validation = () => {
                     {successMsg}
                 </div>
             )}
+            {errorMsg && (
+                <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '1rem', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                    <AlertCircle size={20} />
+                    {errorMsg}
+                </div>
+            )}
 
-            {/* Tabs */}
-            {/* Premium Tabs */}
-            {/* Premium Tabs */}
             {/* Premium Tabs */}
             <div className="flex justify-center mb-8">
                 <div style={{
@@ -105,67 +165,13 @@ const Validation = () => {
                     border: '1px solid rgba(255, 255, 255, 0.1)',
                     gap: '0.5rem'
                 }}>
-                    <button
-                        onClick={() => setActiveTab('pending')}
-                        style={{
-                            padding: '0.6rem 2rem',
-                            borderRadius: '999px',
-                            fontWeight: '700',
-                            fontSize: '0.9rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            border: 'none',
-                            cursor: 'pointer',
-                            transition: 'all 0.3s ease',
-                            backgroundColor: activeTab === 'pending' ? '#a855f7' : 'transparent',
-                            color: activeTab === 'pending' ? 'white' : 'var(--text-secondary)',
-                            boxShadow: activeTab === 'pending' ? '0 4px 12px rgba(168, 85, 247, 0.4)' : 'none'
-                        }}
-                    >
-                        <Clock size={18} />
-                        En Attente
-                        {pendingReceptions.length > 0 && (
-                            <span style={{
-                                backgroundColor: 'white',
-                                color: '#a855f7',
-                                fontSize: '0.75rem',
-                                padding: '0.1rem 0.5rem',
-                                borderRadius: '4px',
-                                marginLeft: '0.5rem',
-                                fontWeight: '800'
-                            }}>{pendingReceptions.length}</span>
-                        )}
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('history')}
-                        style={{
-                            padding: '0.6rem 2rem',
-                            borderRadius: '999px',
-                            fontWeight: '700',
-                            fontSize: '0.9rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            border: 'none',
-                            cursor: 'pointer',
-                            transition: 'all 0.3s ease',
-                            backgroundColor: activeTab === 'history' ? '#10b981' : 'transparent',
-                            color: activeTab === 'history' ? 'white' : 'var(--text-secondary)',
-                            boxShadow: activeTab === 'history' ? '0 4px 12px rgba(16, 185, 129, 0.4)' : 'none'
-                        }}
-                    >
-                        <CheckCircle size={18} />
-                        Historique
-                        <span style={{ opacity: 0.6, fontSize: '0.75rem', fontWeight: '400', marginLeft: '0.25rem' }}>
-                            ({historyReceptions.length})
-                        </span>
-                    </button>
+                    <TabButton id="pending" label="Réceptions" icon={Clock} color="#a855f7" count={pendingReceptions.length} />
+                    <TabButton id="incidents" label="Avaries" icon={AlertTriangle} color="#f59e0b" count={pendingIncidents.length} />
+                    <TabButton id="history" label="Historique" icon={CheckCircle} color="#10b981" />
                 </div>
             </div>
 
-            {activeTab === 'pending' ? (
-                // PENDING VIEW
+            {activeTab === 'pending' && (
                 pendingReceptions.length === 0 ? (
                     <div className="card text-center py-12 border-dashed border-2 border-slate-700">
                         <CheckCircle size={48} className="text-emerald mx-auto mb-4" />
@@ -176,7 +182,6 @@ const Validation = () => {
                     <div className="flex-col gap-6">
                         {pendingReceptions.map(reception => (
                             <div key={reception.id} className="card relative overflow-hidden">
-                                {/* Header */}
                                 <div className="flex-between mb-4 pb-4 border-b border-white/5">
                                     <div className="flex items-center gap-4">
                                         <div className="bg-purple-light p-3 rounded-full">
@@ -192,28 +197,15 @@ const Validation = () => {
                                             </div>
                                         </div>
                                     </div>
-                                    <div>
-                                        <div className="flex gap-2">
-                                            <button
-                                                onClick={() => handleInvalidate(reception.id)}
-                                                className="btn btn-danger"
-                                                title="Refuser / Supprimer"
-                                            >
-                                                <XCircle size={20} />
-                                            </button>
-                                            <button
-                                                onClick={() => handleValidate(reception.id)}
-                                                className="btn btn-primary bg-purple hover:bg-purple-600 border-purple-500"
-                                                style={{ padding: '0.75rem 1.5rem' }}
-                                            >
-                                                <CheckCircle size={20} className="mr-2" />
-                                                Valider Entrée
-                                            </button>
-                                        </div>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => handleInvalidate(reception.id)} className="btn btn-danger" title="Refuser / Supprimer">
+                                            <XCircle size={20} />
+                                        </button>
+                                        <button onClick={() => handleValidate(reception.id)} className="btn btn-primary bg-purple hover:bg-purple-600 border-purple-500">
+                                            <CheckCircle size={20} className="mr-2" /> Valider Entrée
+                                        </button>
                                     </div>
                                 </div>
-
-                                {/* Items Table */}
                                 <div className="overflow-x-auto">
                                     <table className="w-full">
                                         <thead>
@@ -221,28 +213,14 @@ const Validation = () => {
                                                 <th className="pb-3 pl-2">Médicament</th>
                                                 <th className="pb-3 text-right">Quantité</th>
                                                 <th className="pb-3 text-right">Péremption</th>
-                                                <th className="pb-3 text-right pr-2">Status</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {reception.items.map(item => (
-                                                <tr key={item.id} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+                                                <tr key={item.id} className="border-b border-white/5 last:border-0 hover:bg-white/5">
                                                     <td className="py-3 pl-2 font-medium">{item.medName}</td>
                                                     <td className="py-3 text-right font-mono text-purple-400">+{item.quantity}</td>
-                                                    <td className="py-3 text-right text-secondary">
-                                                        {item.details?.expiryDate ? (
-                                                            <span className="flex items-center justify-end gap-1">
-                                                                <Calendar size={14} />
-                                                                {item.details.expiryDate}
-                                                            </span>
-                                                        ) : 'N/A'}
-                                                    </td>
-                                                    <td className="py-3 text-right pr-2">
-                                                        <div className="flex items-center justify-end gap-1 text-amber-500 text-xs">
-                                                            <Clock size={14} />
-                                                            À Valider
-                                                        </div>
-                                                    </td>
+                                                    <td className="py-3 text-right text-secondary">{item.details?.expiryDate || 'N/A'}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -252,8 +230,60 @@ const Validation = () => {
                         ))}
                     </div>
                 )
-            ) : (
-                // HISTORY VIEW
+            )}
+
+            {activeTab === 'incidents' && (
+                pendingIncidents.length === 0 ? (
+                    <div className="card text-center py-12 border-dashed border-2 border-slate-700">
+                        <ShieldCheck size={48} className="text-emerald mx-auto mb-4" />
+                        <h3 className="text-xl mb-2">Aucun incident</h3>
+                        <p className="text-secondary">Aucune avarie ou péremption à traiter.</p>
+                    </div>
+                ) : (
+                    <div className="flex-col gap-4">
+                        {pendingIncidents.map(incident => (
+                            <div key={incident.id} className="card flex-between p-4 border-l-4 border-amber-500">
+                                <div className="flex items-center gap-4">
+                                    <div style={{ padding: '0.75rem', borderRadius: '50%', background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}>
+                                        <AlertTriangle size={24} />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-lg">{incident.medName}</h4>
+                                        <div className="flex items-center gap-2 text-sm text-secondary">
+                                            <span className="badge" style={{ background: '#f59e0b20', color: '#f59e0b' }}>
+                                                {incident.details?.reason || 'Incident'}
+                                            </span>
+                                            <span>• Quantité: <b>{incident.quantity}</b></span>
+                                            <span>• Le: {format(new Date(incident.date), 'dd/MM/yyyy HH:mm')}</span>
+                                        </div>
+                                        {incident.details?.comment && (
+                                            <p className="text-sm mt-1 italic text-slate-400">"{incident.details.comment}"</p>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => handleIncidentAction(incident.id, 'REJECT')}
+                                        className="btn btn-ghost hover:text-white"
+                                        title="Rejeter (Fausse alerte)"
+                                    >
+                                        Rejeter
+                                    </button>
+                                    <button
+                                        onClick={() => handleIncidentAction(incident.id, 'VALIDATE')}
+                                        className="btn btn-danger"
+                                        title="Valider la perte de stock"
+                                    >
+                                        Valider Perte
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )
+            )}
+
+            {activeTab === 'history' && (
                 historyReceptions.length === 0 ? (
                     <div className="card text-center py-12 border-dashed border-2 border-slate-700">
                         <Clock size={48} className="text-secondary mx-auto mb-4" />
@@ -264,7 +294,6 @@ const Validation = () => {
                     <div className="flex-col gap-6">
                         {historyReceptions.map(reception => (
                             <div key={reception.id} className="card relative overflow-hidden" style={{ opacity: 0.8 }}>
-                                {/* Header */}
                                 <div className="flex-between mb-4 pb-4 border-b border-white/5">
                                     <div className="flex items-center gap-4">
                                         <div className="bg-emerald-light p-3 rounded-full">
@@ -281,25 +310,19 @@ const Validation = () => {
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* Items Table */}
                                 <div className="overflow-x-auto">
                                     <table className="w-full">
                                         <thead>
                                             <tr className="text-left text-xs uppercase text-secondary">
                                                 <th className="pb-3 pl-2">Médicament</th>
                                                 <th className="pb-3 text-right">Quantité</th>
-                                                <th className="pb-3 text-right">Péremption</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {reception.items.map(item => (
-                                                <tr key={item.id} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+                                                <tr key={item.id} className="border-b border-white/5 last:border-0 hover:bg-white/5">
                                                     <td className="py-3 pl-2 font-medium">{item.medName}</td>
                                                     <td className="py-3 text-right font-mono text-emerald-400">+{item.quantity}</td>
-                                                    <td className="py-3 text-right text-secondary">
-                                                        {item.details?.expiryDate || 'N/A'}
-                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>

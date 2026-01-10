@@ -235,6 +235,48 @@ export const InventoryProvider = ({ children }) => {
         return audit.id;
     };
 
+    const reportIncident = async (medId, quantity, reason, comment) => {
+        const med = medications.find(m => m.id === medId);
+        if (!med) throw new Error("Médicament non trouvé");
+
+        const { error } = await supabase.from('transactions').insert([{
+            type: 'OUT', // Technically an OUT, but PENDING validation
+            status: 'PENDING',
+            category: 'INCIDENT', // Special flag
+            medId: medId,
+            medName: med.name,
+            quantity: quantity,
+            date: new Date().toISOString(),
+            userId: user.id,
+            details: { reason, comment }
+        }]);
+
+        if (error) throw error;
+        await fetchData();
+    };
+
+    const validateIncident = async (transactionId, action) => {
+        // action: 'VALIDATE' or 'REJECT'
+        const transaction = transactions.find(t => t.id === transactionId);
+        if (!transaction) return;
+
+        if (action === 'REJECT') {
+            await supabase.from('transactions').update({ status: 'REJECTED' }).eq('id', transactionId);
+            await fetchData();
+            return;
+        }
+
+        // Validate -> Deduct Stock
+        const med = medications.find(m => m.id === transaction.medId);
+        if (med) {
+            const newStock = med.stock - transaction.quantity;
+            await supabase.from('medications').update({ stock: newStock }).eq('id', transaction.medId);
+        }
+
+        await supabase.from('transactions').update({ status: 'VALIDATED' }).eq('id', transactionId);
+        await fetchData();
+    };
+
     // Backwards compatibility functions (aliases) - mapped to simple versions or errors
     const addStock = () => console.error("Use addStockBatch");
     const removeStock = () => console.error("Use removeStockBatch");
@@ -251,6 +293,8 @@ export const InventoryProvider = ({ children }) => {
             removeStockBatch,
             validateReception,
             invalidateReception, // New: Reject reception
+            reportIncident, // New: Report defective/expired
+            validateIncident, // New: Validate incident (deduct stock)
             saveAudit, // New: Save Inventory Audit
             deleteMedication, // Exposed for Pharmacist/Admin
             /* Legacy/Unused exposed to prevent crash if still called somewhere before cleanup */
