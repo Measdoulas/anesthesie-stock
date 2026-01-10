@@ -1,15 +1,16 @@
 import { differenceInMonths, parseISO, isPast } from 'date-fns';
 
-export const STOCK_THRESHOLDS = {
-    LOW: 10,
-    CRITICAL: 5
+export const getStockThresholds = () => {
+    const saved = localStorage.getItem('stock_thresholds');
+    return saved ? JSON.parse(saved) : { LOW: 10, CRITICAL: 5 };
 };
 
 export const EXPIRATION_ALERTS = [6, 3, 2, 1]; // Mois
 
 export const getStockStatus = (quantity) => {
-    if (quantity < STOCK_THRESHOLDS.CRITICAL) return 'critical';
-    if (quantity <= STOCK_THRESHOLDS.LOW) return 'low';
+    const thresholds = getStockThresholds();
+    if (quantity < thresholds.CRITICAL) return 'critical';
+    if (quantity <= thresholds.LOW) return 'low';
     return 'normal';
 };
 

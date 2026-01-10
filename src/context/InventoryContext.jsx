@@ -280,7 +280,16 @@ export const InventoryProvider = ({ children }) => {
     // Backwards compatibility functions (aliases) - mapped to simple versions or errors
     const addStock = () => console.error("Use addStockBatch");
     const removeStock = () => console.error("Use removeStockBatch");
-    const clearData = () => alert("Fonction réservée à l'admin DB maintenant.");
+    const clearData = async () => {
+        try {
+            localStorage.clear(); // Clears thresholds and other local prefs
+            await supabase.auth.signOut();
+            window.location.href = '/'; // Force reload to login
+        } catch (e) {
+            console.error("Reset failed", e);
+            window.location.reload();
+        }
+    };
 
     return (
         <InventoryContext.Provider value={{
