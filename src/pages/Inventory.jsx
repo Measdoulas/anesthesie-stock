@@ -186,15 +186,19 @@ const Inventory = () => {
                                         {user?.role === 'ANESTHESISTE' && (
                                             <button
                                                 onClick={() => openIncidentModal(med)}
-                                                className="btn"
-                                                style={{ padding: '0.5rem', backgroundColor: 'rgba(245, 158, 11, 0.1)', color: 'var(--accent-warning)', border: '1px solid rgba(245, 158, 11, 0.2)' }}
+                                                className="btn icon-btn"
+                                                style={{
+                                                    width: '32px', height: '32px', padding: 0, justifyContent: 'center',
+                                                    backgroundColor: 'rgba(245, 158, 11, 0.1)', color: 'var(--accent-warning)',
+                                                    border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: '8px'
+                                                }}
                                                 title="Signaler une avarie / péremption"
                                             >
-                                                <AlertTriangle size={18} />
+                                                <AlertTriangle size={16} />
                                             </button>
                                         )}
 
-                                        {/* Delete (Anesthetist Only as per request) */}
+                                        {/* Delete (Anesthetist Only) */}
                                         {user?.role === 'ANESTHESISTE' && (
                                             <button
                                                 onClick={async () => {
@@ -202,11 +206,15 @@ const Inventory = () => {
                                                         try { await deleteMedication(med.id); } catch (e) { alert("Erreur: " + e.message); }
                                                     }
                                                 }}
-                                                className="btn btn-danger"
-                                                style={{ padding: '0.5rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-danger)' }}
+                                                className="btn icon-btn"
+                                                style={{
+                                                    width: '32px', height: '32px', padding: 0, justifyContent: 'center',
+                                                    backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-danger)',
+                                                    border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px'
+                                                }}
                                                 title="Supprimer définitivement"
                                             >
-                                                <Trash2 size={18} />
+                                                <Trash2 size={16} />
                                             </button>
                                         )}
                                     </div>
@@ -217,74 +225,104 @@ const Inventory = () => {
                 )}
             </div>
 
-            {/* Incident Modal Overlay */}
-            {showIncidentModal && (
-                <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    zIndex: 9999
-                }}>
-                    <div className="card animate-enter" style={{ width: '400px', padding: '1.5rem', border: '1px solid var(--accent-warning)' }}>
-                        <div className="flex-between" style={{ marginBottom: '1.5rem' }}>
-                            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-warning)' }}>
-                                <AlertTriangle size={24} /> Signaler un Incident
-                            </h3>
-                            <button onClick={() => setShowIncidentModal(false)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        <p style={{ marginBottom: '1rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                            Vous signalez un problème pour : <strong style={{ color: 'white' }}>{selectedMedForIncident?.name}</strong>
-                        </p>
-
-                        <form onSubmit={submitIncident} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <div>
-                                <label className="text-sm font-medium mb-1 block">Raison</label>
-                                <select
-                                    className="input-field"
-                                    value={incidentData.reason}
-                                    onChange={e => setIncidentData({ ...incidentData, reason: e.target.value })}
-                                >
-                                    <option value="Casse">Casse (Ampoule/Flacon)</option>
-                                    <option value="Périmé">Lot Périmé</option>
-                                    <option value="Perte">Perte inexpliquée</option>
-                                    <option value="Autre">Autre défaut</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="text-sm font-medium mb-1 block">Quantité impactée</label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max={selectedMedForIncident?.stock || 999}
-                                    className="input-field"
-                                    value={incidentData.quantity}
-                                    onChange={e => setIncidentData({ ...incidentData, quantity: e.target.value })}
-                                />
-                            </div>
-
-                            <div>
-                                <label className="text-sm font-medium mb-1 block">Commentaire (Facultatif)</label>
-                                <textarea
-                                    className="input-field"
-                                    rows="2"
-                                    value={incidentData.comment}
-                                    onChange={e => setIncidentData({ ...incidentData, comment: e.target.value })}
-                                    placeholder="Détails supplémentaires..."
-                                ></textarea>
-                            </div>
-
-                            <button type="submit" className="btn btn-warning" style={{ marginTop: '0.5rem', width: '100%', justifyContent: 'center' }}>
-                                Signaler au Pharmacien
-                            </button>
-                        </form>
-                    </div>
-                </div>
+            {/* Floating Action Button for Adding Medication */}
+            {user?.role === 'ANESTHESISTE' && (
+                <button
+                    onClick={() => setShowAddForm(!showAddForm)}
+                    style={{
+                        position: 'fixed',
+                        bottom: '2rem',
+                        right: '2rem',
+                        width: '60px',
+                        height: '60px',
+                        borderRadius: '50%',
+                        backgroundColor: 'var(--accent-primary)',
+                        color: 'white',
+                        boxShadow: '0 4px 20px rgba(168, 85, 247, 0.4)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        border: 'none',
+                        cursor: 'pointer',
+                        zIndex: 100,
+                        transition: 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1) rotate(90deg)'}
+                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1) rotate(0deg)'}
+                >
+                    <Plus size={32} />
+                </button>
             )}
-        </div>
+
+
+            {/* Incident Modal Overlay */}
+            {
+                showIncidentModal && (
+                    <div style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        zIndex: 9999
+                    }}>
+                        <div className="card animate-enter" style={{ width: '400px', padding: '1.5rem', border: '1px solid var(--accent-warning)' }}>
+                            <div className="flex-between" style={{ marginBottom: '1.5rem' }}>
+                                <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-warning)' }}>
+                                    <AlertTriangle size={24} /> Signaler un Incident
+                                </h3>
+                                <button onClick={() => setShowIncidentModal(false)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <p style={{ marginBottom: '1rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                                Vous signalez un problème pour : <strong style={{ color: 'white' }}>{selectedMedForIncident?.name}</strong>
+                            </p>
+
+                            <form onSubmit={submitIncident} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                <div>
+                                    <label className="text-sm font-medium mb-1 block">Raison</label>
+                                    <select
+                                        className="input-field"
+                                        value={incidentData.reason}
+                                        onChange={e => setIncidentData({ ...incidentData, reason: e.target.value })}
+                                    >
+                                        <option value="Casse">Casse (Ampoule/Flacon)</option>
+                                        <option value="Périmé">Lot Périmé</option>
+                                        <option value="Perte">Perte inexpliquée</option>
+                                        <option value="Autre">Autre défaut</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="text-sm font-medium mb-1 block">Quantité impactée</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max={selectedMedForIncident?.stock || 999}
+                                        className="input-field"
+                                        value={incidentData.quantity}
+                                        onChange={e => setIncidentData({ ...incidentData, quantity: e.target.value })}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-sm font-medium mb-1 block">Commentaire (Facultatif)</label>
+                                    <textarea
+                                        className="input-field"
+                                        rows="2"
+                                        value={incidentData.comment}
+                                        onChange={e => setIncidentData({ ...incidentData, comment: e.target.value })}
+                                        placeholder="Détails supplémentaires..."
+                                    ></textarea>
+                                </div>
+
+                                <button type="submit" className="btn btn-warning" style={{ marginTop: '0.5rem', width: '100%', justifyContent: 'center' }}>
+                                    Signaler au Pharmacien
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                )
+            }
+        </div >
     );
 };
 

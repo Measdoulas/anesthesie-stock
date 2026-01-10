@@ -32,20 +32,50 @@ const Settings = () => {
         }
     }, [user]);
 
-    const handleAvatarChange = (e) => {
+    // Resizing logic for Avatar
+    const resizeImage = (file) => {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new window.Image(); // Avoid conflict with Lucide Image
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 300;
+                    const MAX_HEIGHT = 300;
+                    let width = img.width;
+                    let height = img.height;
+
+                    // Square crop strategy: take the center square
+                    const size = Math.min(width, height);
+                    const sx = (width - size) / 2;
+                    const sy = (height - size) / 2;
+
+                    canvas.width = MAX_WIDTH;
+                    canvas.height = MAX_HEIGHT;
+
+                    const ctx = canvas.getContext('2d');
+                    // Draw cropped square center to canvas
+                    ctx.drawImage(img, sx, sy, size, size, 0, 0, MAX_WIDTH, MAX_HEIGHT);
+
+                    resolve(canvas.toDataURL('image/jpeg', 0.8)); // Compress JPEG 80%
+                };
+            };
+        });
+    };
+
+    const handleAvatarChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        if (file.size > 500000) { // 500KB limit
-            alert("L'image est trop volumineuse (Max 500KB)");
-            return;
+        try {
+            const resizedBase64 = await resizeImage(file);
+            setAvatarPreview(resizedBase64);
+        } catch (err) {
+            console.error(err);
+            alert("Erreur lors du traitement de l'image.");
         }
-
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setAvatarPreview(reader.result);
-        };
-        reader.readAsDataURL(file);
     };
 
     const handleUpdateProfile = async (e) => {
@@ -86,10 +116,9 @@ const Settings = () => {
         localStorage.setItem('stock_thresholds', JSON.stringify(thresholds));
         setPrefMsg('Préférences enregistrées !');
         setTimeout(() => setPrefMsg(''), 3000);
-        // Force reload to apply alerts immediately or use context (Reload is simpler for MVP)
-        // Actually, since getStockStatus reads from localStorage every time, it might work on next render.
-        // But to be sure, we can trigger a re-render of components using it. 
-        // For now, let's just save.
+        // Tip: Reload page to propagate changes to sidebar/inventory checks if they don't listen to storage
+        // A simple reload is the most robust way for this MVP without complex context listeners for "prefs"
+        setTimeout(() => window.location.reload(), 1000);
     };
 
     const handleExport = () => {
@@ -156,7 +185,7 @@ const Settings = () => {
                                 accept="image/*"
                                 style={{ display: 'none' }}
                             />
-                            <p className="text-xs text-secondary">Max 500KB</p>
+                            <p className="text-xs text-secondary text-center">Format carré auto</p>
                         </div>
 
                         <div className="flex-1 space-y-4">
@@ -295,7 +324,7 @@ const Settings = () => {
                 </h3>
                 <div className="flex items-center justify-between">
                     <p className="text-sm text-secondary max-w-md">
-                        Téléchargez une sauvegarde compète de vos données (JSON).
+                        Téléchargez une sauvegarde complète de vos données (JSON).
                     </p>
                     <button onClick={handleExport} className="btn bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20">
                         <Download size={20} /> Exporter
@@ -329,7 +358,7 @@ const Settings = () => {
             </div>
 
             <div className="text-center text-xs text-secondary opacity-50">
-                AnesthMed_HBC v2.2 • Build 2024.1.0
+                AnesthMed_HBC v2.3 • Avec Auto-Crop & Branding
             </div>
         </div>
     );

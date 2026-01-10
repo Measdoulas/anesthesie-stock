@@ -29,13 +29,11 @@ const Login = () => {
     return (
         <div className="flex-center" style={{ minHeight: '100vh', flexDirection: 'column', gap: '2rem', padding: '1rem' }}>
             <div className="text-center animate-enter">
-                <div className="flex-center mb-4">
-                    <div style={{ padding: '1rem', borderRadius: '50%', backgroundColor: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                        <Activity size={48} className="text-emerald" />
-                    </div>
+                <div className="flex-center mb-6">
+                    <img src="/logo.jpg" alt="Logo Hôpital" style={{ width: '120px', height: '120px', borderRadius: '16px', objectFit: 'cover', boxShadow: '0 8px 32px rgba(0,0,0,0.3)', border: '4px solid rgba(255,255,255,0.1)' }} />
                 </div>
-                <h1 className="logo-text" style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>AnesthMed_ HBC</h1>
-                <p className="text-secondary">Portail de Gestion Sécurisée des Médicaments</p>
+                <h1 className="logo-text" style={{ fontSize: '2.5rem', marginBottom: '0.5rem', textShadow: '0 0 20px rgba(168, 85, 247, 0.4)' }}>AnesthMed_ HBC</h1>
+                <p className="text-secondary tracking-wider font-light">Portail de Gestion Sécurisée des Médicaments</p>
             </div>
 
             <div className="card animate-enter" style={{ maxWidth: '400px', width: '100%', padding: '2rem' }}>
