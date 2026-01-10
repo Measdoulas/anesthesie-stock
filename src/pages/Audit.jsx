@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useInventory } from '../context/InventoryContext';
 import { useAuth } from '../context/AuthContext';
-import { ClipboardList, FileText, AlertTriangle, CheckCircle, Search, Clock, Plus, ArrowLeft, ChevronRight, Calculator } from 'lucide-react';
+import { ClipboardList, FileText, AlertTriangle, CheckCircle, Search, Clock, Plus, ArrowLeft, ChevronRight } from 'lucide-react';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { supabase } from '../supabaseClient';
@@ -16,7 +16,7 @@ const Audit = () => {
     const [viewMode, setViewMode] = useState('dashboard');
     const [auditHistory, setAuditHistory] = useState([]);
     const [selectedAudit, setSelectedAudit] = useState(null);
-    const [auditData, setAuditData] = useState([]);
+    const [auditData, setAuditData] = useState([]); // Snapshot state for new audit
     const [filter, setFilter] = useState('');
     const [isSaving, setIsSaving] = useState(false);
 
@@ -32,7 +32,7 @@ const Audit = () => {
     const fetchHistory = async () => {
         const { data, error } = await supabase
             .from('audits')
-            .select('*, profiles(full_name)') // join profiles if possible or just use user_id
+            .select('*, profiles(full_name)')
             .order('created_at', { ascending: false });
         if (data) setAuditHistory(data);
     };
@@ -48,7 +48,7 @@ const Audit = () => {
     };
 
     const startNewAudit = () => {
-        // Init snapshot
+        // Init snapshot with current system stock
         const initialData = medications.map(med => ({
             ...med,
             physicalStock: med.stock, // Default to system stock
@@ -90,10 +90,21 @@ const Audit = () => {
                 discrepancyCount: discrepancies
             };
 
+            // Save to DB
             const auditId = await saveAudit(auditData, summary);
-            await fetchAuditDetails(auditId); // Switch to details view
-            generatePDF(auditData, { ...summary, date: new Date().toISOString(), auditor: user.name || 'Moi' }, true);
+
+            // Fetch the saved audit to display details
+            await fetchAuditDetails(auditId);
+
+            // Auto-Generate PDF
+            generatePDF(auditData, {
+                ...summary,
+                date: new Date().toISOString(),
+                auditor: user.name || 'Moi'
+            }, true);
+
         } catch (error) {
+            console.error(error);
             alert("Erreur lors de la sauvegarde: " + error.message);
         } finally {
             setIsSaving(false);
@@ -138,7 +149,7 @@ const Audit = () => {
         }
         doc.setTextColor(0);
 
-        // Table
+        // Table Data Prep
         const tableColumn = ["Médicament", "Système", "Physique", "Écart", "Commentaire"];
         const tableRows = items.map(item => [
             item.name || item.med_name,
@@ -148,7 +159,8 @@ const Audit = () => {
             item.comment || ''
         ]);
 
-        doc.autoTable({
+        // AutoTable Generation
+        autoTable(doc, {
             head: [tableColumn],
             body: tableRows,
             startY: 70,
@@ -169,7 +181,9 @@ const Audit = () => {
         });
 
         // Signatures
+        // Access finalY via doc.lastAutoTable.finalY
         const finalY = doc.lastAutoTable.finalY + 20;
+
         doc.setDrawColor(100);
         doc.setLineWidth(0.5);
 
@@ -191,17 +205,21 @@ const Audit = () => {
     // --- RENDERERS ---
 
     const renderDashboard = () => (
-        <div className="animate-enter max-w-5xl mx-auto space-y-8">
+        <div className="animate-enter" style={{ maxWidth: '1000px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
             <div className="flex-between">
                 <div>
-                    <h2 className="logo-text text-3xl mb-2 flex items-center gap-3">
-                        <ClipboardList className="text-secondary" />
+                    <h2 className="logo-text" style={{ fontSize: '2rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <ClipboardList style={{ color: 'var(--text-secondary)' }} />
                         Contrôle & Audit
                     </h2>
-                    <p className="text-secondary">Gestion et historique des inventaires</p>
+                    <p style={{ color: 'var(--text-secondary)' }}>Gestion et historique des inventaires</p>
                 </div>
                 {isPharmacist && (
-                    <button onClick={startNewAudit} className="btn btn-primary shadow-lg shadow-blue-500/20 hover:scale-105 transition-transform">
+                    <button
+                        onClick={startNewAudit}
+                        className="btn btn-primary"
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                    >
                         <Plus size={20} /> Nouvel Audit
                     </button>
                 )}
@@ -209,39 +227,56 @@ const Audit = () => {
 
             {/* History List */}
             <div className="card">
-                <h3 className="mb-6 flex items-center gap-2 text-lg">
-                    <Clock className="text-purple" size={20} />
+                <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.25rem' }}>
+                    <Clock style={{ color: '#a855f7' }} size={20} />
                     Historique des Contrôles
                 </h3>
 
                 {auditHistory.length === 0 ? (
-                    <div className="text-center py-12 border-2 border-dashed border-slate-700/50 rounded-lg">
-                        <p className="text-secondary">Aucun audit enregistré.</p>
+                    <div style={{ padding: '3rem', textAlign: 'center', border: '2px dashed rgba(255,255,255,0.1)', borderRadius: 'var(--radius-md)' }}>
+                        <p style={{ color: 'var(--text-secondary)' }}>Aucun audit enregistré pour le moment.</p>
                     </div>
                 ) : (
-                    <div className="space-y-3">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                         {auditHistory.map(audit => (
                             <div
                                 key={audit.id}
                                 onClick={() => fetchAuditDetails(audit.id)}
-                                className="group flex-between p-4 bg-slate-800/30 rounded-xl border border-white/5 hover:border-purple/30 hover:bg-slate-800 transition-all cursor-pointer"
+                                style={{
+                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                    padding: '1rem',
+                                    background: 'rgba(255,255,255,0.03)',
+                                    borderRadius: 'var(--radius-md)',
+                                    cursor: 'pointer',
+                                    border: '1px solid transparent',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.3)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor = 'transparent'; }}
                             >
-                                <div className="flex items-center gap-4">
-                                    <div className={`p-3 rounded-full ${audit.discrepancy_count === 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                    <div style={{
+                                        padding: '0.75rem',
+                                        borderRadius: '50%',
+                                        backgroundColor: audit.discrepancy_count === 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                                        color: audit.discrepancy_count === 0 ? 'var(--accent-secondary)' : 'var(--accent-warning)'
+                                    }}>
                                         {audit.discrepancy_count === 0 ? <CheckCircle size={20} /> : <AlertTriangle size={20} />}
                                     </div>
                                     <div>
-                                        <h4 className="font-bold text-lg">Audit du {format(new Date(audit.created_at), 'dd MMMM yyyy à HH:mm', { locale: fr })}</h4>
-                                        <p className="text-sm text-secondary">
+                                        <h4 style={{ fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '0.2rem' }}>
+                                            Audit du {format(new Date(audit.created_at), 'dd MMMM yyyy à HH:mm', { locale: fr })}
+                                        </h4>
+                                        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
                                             {audit.total_items} articles contrôlés • {audit.discrepancy_count} écart(s)
                                         </p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3">
-                                    <span className="text-xs font-bold px-3 py-1 rounded-full bg-white/5 text-secondary group-hover:bg-purple/20 group-hover:text-purple transition-colors">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: 'bold', padding: '0.2rem 0.6rem', borderRadius: '99px', background: 'rgba(255,255,255,0.1)', color: 'var(--text-secondary)' }}>
                                         Voir Détails
                                     </span>
-                                    <ChevronRight size={16} className="text-secondary group-hover:translate-x-1 transition-transform" />
+                                    <ChevronRight size={16} style={{ color: 'var(--text-secondary)' }} />
                                 </div>
                             </div>
                         ))}
@@ -252,34 +287,36 @@ const Audit = () => {
     );
 
     const renderNewAudit = () => (
-        <div className="animate-enter max-w-6xl mx-auto space-y-6">
+        <div className="animate-enter" style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <div className="flex-between">
-                <button onClick={() => setViewMode('dashboard')} className="btn btn-ghost flex items-center gap-2 text-secondary hover:text-white">
+                <button onClick={() => setViewMode('dashboard')} className="btn btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <ArrowLeft size={20} /> Retour
                 </button>
-                <div className="flex gap-3">
+                <div style={{ display: 'flex', gap: '1rem' }}>
                     <button
                         onClick={handleSaveAudit}
                         disabled={isSaving}
-                        className="btn btn-success shadow-lg shadow-emerald-500/20"
+                        className="btn btn-success"
+                        style={{ boxShadow: '0 4px 14px 0 rgba(72,187,120,0.39)' }}
                     >
                         {isSaving ? "Enregistrement..." : "Terminer & Valider"}
                     </button>
                 </div>
             </div>
 
-            <div className="card p-6 border-l-4 border-blue-500">
-                <div className="flex-between mb-6">
+            <div className="card" style={{ padding: '1.5rem', borderLeft: '4px solid var(--accent-primary)' }}>
+                <div className="flex-between" style={{ marginBottom: '1.5rem' }}>
                     <div>
-                        <h2 className="text-2xl font-bold mb-1">Nouvel Audit en cours</h2>
-                        <p className="text-secondary">Saisissez les quantités physiques constatées.</p>
+                        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>Nouvel Audit en cours</h2>
+                        <p style={{ color: 'var(--text-secondary)' }}>Saisissez les quantités physiques constatées.</p>
                     </div>
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary" size={18} />
+                    <div style={{ position: 'relative' }}>
+                        <Search style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} size={18} />
                         <input
                             type="text"
                             placeholder="Filtrer..."
-                            className="input-field pl-10 w-64"
+                            className="input-field"
+                            style={{ paddingLeft: '2.5rem', width: '250px' }}
                             value={filter}
                             onChange={e => setFilter(e.target.value)}
                         />
@@ -287,40 +324,55 @@ const Audit = () => {
                 </div>
 
                 <div className="table-container">
-                    <table className="w-full">
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
-                            <tr className="text-left text-secondary border-b border-white/10">
-                                <th className="pb-3 pl-2">Médicament</th>
-                                <th className="pb-3 text-center">Théorique</th>
-                                <th className="pb-3 text-center w-32">Physique</th>
-                                <th className="pb-3 text-center">Écart</th>
-                                <th className="pb-3 w-1/3">Commentaire</th>
+                            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'var(--text-secondary)' }}>
+                                <th style={{ paddingBottom: '1rem', paddingLeft: '0.5rem' }}>Médicament</th>
+                                <th style={{ paddingBottom: '1rem', textAlign: 'center' }}>Théorique</th>
+                                <th style={{ paddingBottom: '1rem', textAlign: 'center', width: '150px' }}>Physique</th>
+                                <th style={{ paddingBottom: '1rem', textAlign: 'center' }}>Écart</th>
+                                <th style={{ paddingBottom: '1rem', width: '30%' }}>Commentaire</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filteredAuditData.map(item => (
-                                <tr key={item.id} className="border-b border-white/5 hover:bg-white/5">
-                                    <td className="py-3 pl-2 font-medium">{item.name}</td>
-                                    <td className="py-3 text-center text-secondary">{item.stock}</td>
-                                    <td className="py-3 text-center">
+                                <tr key={item.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <td style={{ padding: '0.75rem 0.5rem', fontWeight: '500' }}>{item.name}</td>
+                                    <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{item.stock}</td>
+                                    <td style={{ textAlign: 'center' }}>
                                         <input
                                             type="number"
-                                            className="input-field py-1 text-center font-bold text-white bg-slate-900 border-slate-700 focus:border-blue-500"
+                                            className="input-field"
+                                            style={{
+                                                textAlign: 'center', fontWeight: 'bold',
+                                                background: 'rgba(15, 23, 42, 0.5)',
+                                                borderColor: 'rgba(255,255,255,0.1)',
+                                                width: '100px',
+                                                margin: '0 auto'
+                                            }}
                                             value={item.physicalStock}
                                             onChange={(e) => handleStockChange(item.id, e.target.value)}
                                             onFocus={(e) => e.target.select()}
                                             min="0"
                                         />
                                     </td>
-                                    <td className="py-3 text-center font-bold">
-                                        <span className={item.gap === 0 ? 'text-emerald-500' : 'text-red-500'}>
+                                    <td style={{ textAlign: 'center', fontWeight: 'bold' }}>
+                                        <span style={{ color: item.gap === 0 ? 'var(--accent-secondary)' : 'var(--accent-warning)' }}>
                                             {item.gap > 0 ? `+${item.gap}` : item.gap}
                                         </span>
                                     </td>
-                                    <td className="py-3">
+                                    <td style={{ padding: '0.75rem 0' }}>
                                         <input
                                             type="text"
-                                            className="input-field py-1 text-sm bg-transparent border-transparent hover:border-slate-700 focus:border-blue-500 focus:bg-slate-900 transition-all"
+                                            className="input-field"
+                                            style={{
+                                                fontSize: '0.85rem',
+                                                padding: '0.4rem',
+                                                background: 'transparent',
+                                                border: '1px solid transparent'
+                                            }}
+                                            onFocus={(e) => e.target.style.borderColor = 'var(--accent-primary)'}
+                                            onBlur={(e) => e.target.style.borderColor = 'transparent'}
                                             placeholder="..."
                                             value={item.comment}
                                             onChange={(e) => handleCommentChange(item.id, e.target.value)}
@@ -336,71 +388,71 @@ const Audit = () => {
     );
 
     const renderDetails = () => (
-        <div className="animate-enter max-w-5xl mx-auto space-y-6">
+        <div className="animate-enter" style={{ maxWidth: '1000px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <div className="flex-between">
-                <button onClick={() => setViewMode('dashboard')} className="btn btn-ghost flex items-center gap-2">
+                <button onClick={() => setViewMode('dashboard')} className="btn btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <ArrowLeft size={20} /> Retour Dashboard
                 </button>
                 <button
                     onClick={() => generatePDF(selectedAudit.items, {
                         date: selectedAudit.created_at,
-                        auditor: 'Utilisateur', // or fetch from profile join if available
+                        auditor: 'Utilisateur',
                         totalItems: selectedAudit.total_items,
                         discrepancyCount: selectedAudit.discrepancy_count
                     })}
                     className="btn btn-primary"
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                 >
                     <FileText size={20} /> Télécharger PDF
                 </button>
             </div>
 
-            <div className="card border-t-4 border-emerald-500">
-                <div className="flex items-center gap-4 mb-6 pb-6 border-b border-white/10">
-                    <div className="p-4 rounded-full bg-emerald-500/10 text-emerald-400">
+            <div className="card" style={{ borderTop: '4px solid var(--accent-secondary)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                    <div style={{ padding: '1rem', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', color: 'var(--accent-secondary)' }}>
                         <CheckCircle size={32} />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-bold">Rapport d'Audit #{selectedAudit?.id?.slice(0, 8)}</h2>
-                        <p className="text-secondary">
+                        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Rapport d'Audit #{selectedAudit?.id?.slice(0, 8)}</h2>
+                        <p style={{ color: 'var(--text-secondary)' }}>
                             Validé le {format(new Date(selectedAudit?.created_at), 'dd MMMM yyyy à HH:mm', { locale: fr })}
                         </p>
                     </div>
-                    <div className="ml-auto flex gap-8 text-center">
+                    <div style={{ marginLeft: 'auto', display: 'flex', gap: '2rem', textAlign: 'center' }}>
                         <div>
-                            <p className="text-secondary text-sm uppercase font-bold">Items</p>
-                            <p className="text-2xl font-bold">{selectedAudit?.total_items}</p>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 'bold', textTransform: 'uppercase' }}>Items</p>
+                            <p style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{selectedAudit?.total_items}</p>
                         </div>
                         <div>
-                            <p className="text-secondary text-sm uppercase font-bold">Écarts</p>
-                            <p className={`text-2xl font-bold ${selectedAudit?.discrepancy_count > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 'bold', textTransform: 'uppercase' }}>Écarts</p>
+                            <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: selectedAudit?.discrepancy_count > 0 ? 'var(--accent-warning)' : 'var(--accent-secondary)' }}>
                                 {selectedAudit?.discrepancy_count}
                             </p>
                         </div>
                     </div>
                 </div>
 
-                {/* Read Only Table */}
-                <div className="table-container max-h-[600px] overflow-y-auto">
-                    <table className="w-full">
-                        <thead className="sticky top-0 bg-slate-800 z-10">
-                            <tr className="text-left text-secondary font-medium">
-                                <th className="pb-4 pl-2">Médicament</th>
-                                <th className="pb-4 text-center">Théorique</th>
-                                <th className="pb-4 text-center">Physique</th>
-                                <th className="pb-4 text-center">Écart</th>
-                                <th className="pb-4">Commentaire</th>
+                <div className="table-container" style={{ maxHeight: '600px', overflowY: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead style={{ position: 'sticky', top: 0, background: '#1e293b', zIndex: 10 }}>
+                            <tr style={{ textAlign: 'left', color: 'var(--text-secondary)' }}>
+                                <th style={{ paddingBottom: '1rem', paddingLeft: '0.5rem' }}>Médicament</th>
+                                <th style={{ paddingBottom: '1rem', textAlign: 'center' }}>Théorique</th>
+                                <th style={{ paddingBottom: '1rem', textAlign: 'center' }}>Physique</th>
+                                <th style={{ paddingBottom: '1rem', textAlign: 'center' }}>Écart</th>
+                                <th style={{ paddingBottom: '1rem' }}>Commentaire</th>
                             </tr>
                         </thead>
                         <tbody>
                             {selectedAudit?.items?.map(item => (
-                                <tr key={item.id} className="border-b border-white/5 hover:bg-white/5">
-                                    <td className="py-3 pl-2 font-medium">{item.med_name}</td>
-                                    <td className="py-3 text-center text-secondary">{item.theoretical_stock}</td>
-                                    <td className="py-3 text-center font-bold">{item.physical_stock}</td>
-                                    <td className={`py-3 text-center font-bold ${item.gap !== 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                                <tr key={item.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <td style={{ padding: '0.75rem 0.5rem', fontWeight: '500' }}>{item.med_name}</td>
+                                    <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{item.theoretical_stock}</td>
+                                    <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{item.physical_stock}</td>
+                                    <td style={{ textAlign: 'center', fontWeight: 'bold', color: item.gap !== 0 ? 'var(--accent-warning)' : 'var(--accent-secondary)' }}>
                                         {item.gap > 0 ? '+' : ''}{item.gap}
                                     </td>
-                                    <td className="py-3 text-sm text-secondary italic">
+                                    <td style={{ padding: '0.75rem 0', fontSize: '0.9rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
                                         {item.comment || '-'}
                                     </td>
                                 </tr>
