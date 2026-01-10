@@ -225,32 +225,7 @@ const Inventory = () => {
                 )}
             </div>
 
-            {/* Floating Action Button for Adding Medication */}
-            {user?.role === 'ANESTHESISTE' && (
-                <button
-                    onClick={() => setShowAddForm(!showAddForm)}
-                    style={{
-                        position: 'fixed',
-                        bottom: '2rem',
-                        right: '2rem',
-                        width: '60px',
-                        height: '60px',
-                        borderRadius: '50%',
-                        backgroundColor: 'var(--accent-primary)',
-                        color: 'white',
-                        boxShadow: '0 4px 20px rgba(168, 85, 247, 0.4)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        border: 'none',
-                        cursor: 'pointer',
-                        zIndex: 100,
-                        transition: 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1) rotate(90deg)'}
-                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1) rotate(0deg)'}
-                >
-                    <Plus size={32} />
-                </button>
-            )}
+
 
 
             {/* Incident Modal Overlay */}

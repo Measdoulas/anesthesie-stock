@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useInventory } from '../context/InventoryContext';
 import { useAuth } from '../context/AuthContext';
-import { Download, Trash2, AlertTriangle, Database, User, Lock, Save, CheckCircle, Image, Camera, Upload, Settings as SettingsIcon, Bell } from 'lucide-react';
+import { Download, Trash2, AlertTriangle, Database, User, Lock, Save, CheckCircle, Camera, Settings as SettingsIcon, Bell } from 'lucide-react';
 import { format } from 'date-fns';
 import { getStockThresholds } from '../utils/alerts';
 

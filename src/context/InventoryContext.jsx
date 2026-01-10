@@ -187,7 +187,6 @@ export const InventoryProvider = ({ children }) => {
             .eq('receptionId', receptionId);
 
         if (error) throw error;
-        if (error) throw error;
         await fetchData();
     };
 
