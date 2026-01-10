@@ -30,11 +30,17 @@ const Audit = () => {
     }, [viewMode]);
 
     const fetchHistory = async () => {
-        const { data, error } = await supabase
-            .from('audits')
-            .select('*, profiles(full_name)')
-            .order('created_at', { ascending: false });
-        if (data) setAuditHistory(data);
+        try {
+            const { data, error } = await supabase
+                .from('audits')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            if (data) setAuditHistory(data);
+        } catch (error) {
+            console.error("Error fetching audit history:", error);
+        }
     };
 
     const fetchAuditDetails = async (auditId) => {
