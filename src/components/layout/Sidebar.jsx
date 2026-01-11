@@ -35,8 +35,8 @@ const Sidebar = ({ isOpen }) => {
         <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
             <div className="sidebar-header" style={{ flexDirection: 'column', gap: '0.5rem', marginTop: '1rem', marginBottom: '2rem' }}>
                 <img src="/logo.jpg" alt="Logo" style={{ width: '80px', height: '80px', borderRadius: '12px', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.1)' }} />
-                <h1 className="logo-text" style={{ fontSize: '1.1rem', textAlign: 'center' }}>
-                    AnesthMed<br />Hôpital Braun
+                <h1 className="logo-text" style={{ fontSize: '1.2rem', textAlign: 'center' }}>
+                    AnesthMed
                 </h1>
             </div>
 
