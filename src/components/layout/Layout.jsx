@@ -39,25 +39,10 @@ const Layout = () => {
                 />
             )}
 
-            <main className="main-content" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-                <div className="container" style={{ flex: 1 }}>
+            <main className="main-content">
+                <div className="container">
                     <Outlet />
                 </div>
-                <footer style={{
-                    padding: '1.5rem',
-                    textAlign: 'center',
-                    fontSize: '0.75rem',
-                    color: 'var(--text-secondary)',
-                    borderTop: '1px solid rgba(255,255,255,0.05)',
-                    marginTop: '2rem'
-                }}>
-                    <p style={{ marginBottom: '0.25rem' }}>
-                        &copy; {new Date().getFullYear()} <strong>Dr. Anesthésiste</strong>. Tous droits de propriété intellectuelle réservés.
-                    </p>
-                    <p style={{ opacity: 0.7 }}>
-                        Licence d'utilisation exclusive accordée au <strong>Centre Hospitalier Braun de Cinkassé</strong>.
-                    </p>
-                </footer>
             </main>
         </div>
     );
