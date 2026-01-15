@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useInventory } from '../context/InventoryContext';
 import { useAuth } from '../context/AuthContext';
-import { Download, Trash2, AlertTriangle, Database, User, Lock, Save, CheckCircle, Camera, Settings as SettingsIcon, Bell } from 'lucide-react';
+import { Download, Trash2, AlertTriangle, Database, User, Lock, Save, CheckCircle, Camera, Settings as SettingsIcon, Bell, BarChart3 } from 'lucide-react';
 import { format } from 'date-fns';
-import { getStockThresholds } from '../utils/alerts';
+import { getStockThresholds, getAlertCoefficients, saveAlertCoefficients } from '../utils/alerts';
+import ConsumptionStatsModal from '../components/ConsumptionStatsModal';
 
 const Settings = () => {
     const { medications, transactions, clearData } = useInventory();
@@ -20,11 +21,17 @@ const Settings = () => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [passwordMsg, setPasswordMsg] = useState({ text: '', type: '' });
 
-    // Preferences State
+    // Alert Management State
+    const [coefficients, setCoefficients] = useState({ normal: 2, low: 1.5, critical: 1, minAbsolute: 2 });
+    const [showConsumptionStats, setShowConsumptionStats] = useState(false);
+    const [alertMsg, setAlertMsg] = useState('');
+
+    // Legacy Preferences State (keep for backward compat)
     const [thresholds, setThresholds] = useState({ LOW: 10, CRITICAL: 5 });
     const [prefMsg, setPrefMsg] = useState('');
 
     useEffect(() => {
+        setCoefficients(getAlertCoefficients());
         setThresholds(getStockThresholds());
         if (user) {
             setFullName(user.name);
@@ -119,6 +126,12 @@ const Settings = () => {
         // Tip: Reload page to propagate changes to sidebar/inventory checks if they don't listen to storage
         // A simple reload is the most robust way for this MVP without complex context listeners for "prefs"
         setTimeout(() => window.location.reload(), 1000);
+    };
+
+    const handleSaveCoefficients = () => {
+        saveAlertCoefficients(coefficients);
+        setAlertMsg('Coefficients enregistrés ! Rechargement...');
+        setTimeout(() => window.location.reload(), 1000); // Reload to apply changes
     };
 
     const handleExport = () => {
@@ -217,60 +230,119 @@ const Settings = () => {
                 </form>
             </div>
 
-            {/* PREFERENCES SECTION */}
+            {/* ALERT MANAGEMENT SECTION */}
             <div className="card relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-1 h-full bg-blue"></div>
+                <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
                 <h3 className="flex items-center gap-2 mb-6 text-xl font-bold">
-                    <SettingsIcon className="text-blue" size={24} /> Préférences & Alertes
+                    <BarChart3 className="text-emerald-500" size={24} /> Gestion des Alertes
                 </h3>
 
                 <div className="space-y-6">
+                    <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                        <h4 className="font-bold text-sm mb-2 text-blue-400">📊 Alertes Intelligentes Activées</h4>
+                        <p className="text-xs text-secondary leading-relaxed">
+                            Les seuils sont maintenant calculés automatiquement en fonction de la <strong>consommation moyenne des 3 derniers mois</strong> (avec pondération saisonnière).
+                            Ajustez les coefficients ci-dessous selon vos besoins.
+                        </p>
+                    </div>
+
+                    {/* Coefficient Sliders */}
                     <div>
                         <div className="flex-between mb-2">
-                            <label className="text-sm font-bold text-secondary uppercase flex items-center gap-2">
-                                <Bell size={16} /> Seuil d'alerte "Stock Faible"
-                            </label>
-                            <span className="text-blue font-mono font-bold">{thresholds.LOW} unités</span>
+                            <label className="text-sm font-bold text-secondary uppercase">Stock Normal (mois)</label>
+                            <span className="text-emerald font-mono font-bold">× {coefficients.normal}</span>
                         </div>
                         <input
                             type="range"
-                            min="1" max="50"
-                            value={thresholds.LOW}
-                            onChange={(e) => setThresholds({ ...thresholds, LOW: parseInt(e.target.value) })}
-                            className="w-full accent-blue-500 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                            min="1" max="5" step="0.1"
+                            value={coefficients.normal}
+                            onChange={(e) => setCoefficients({ ...coefficients, normal: parseFloat(e.target.value) })}
+                            className="w-full accent-emerald-500 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer"
                         />
                         <p className="text-xs text-secondary mt-2">
-                            En dessous de {thresholds.LOW} unités, le médicament apparaîtra en <span className="text-amber-500">Orange</span>.
+                            Seuil = (Consommation Moyenne × {coefficients.normal}) mois de stock
                         </p>
                     </div>
 
                     <div>
                         <div className="flex-between mb-2">
-                            <label className="text-sm font-bold text-secondary uppercase flex items-center gap-2">
-                                <AlertTriangle size={16} /> Seuil d'alerte "Critique"
-                            </label>
-                            <span className="text-red font-mono font-bold">{thresholds.CRITICAL} unités</span>
+                            <label className="text-sm font-bold text-secondary uppercase">Stock Faible (mois)</label>
+                            <span className="text-amber font-mono font-bold">× {coefficients.low}</span>
                         </div>
                         <input
                             type="range"
-                            min="1" max="20"
-                            value={thresholds.CRITICAL}
-                            onChange={(e) => setThresholds({ ...thresholds, CRITICAL: parseInt(e.target.value) })}
+                            min="1" max="3" step="0.1"
+                            value={coefficients.low}
+                            onChange={(e) => setCoefficients({ ...coefficients, low: parseFloat(e.target.value) })}
+                            className="w-full accent-amber-500 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                        />
+                        <p className="text-xs text-secondary mt-2">
+                            Alerte <span className="text-amber-500">Orange</span> : Consommation Moyenne × {coefficients.low} mois
+                        </p>
+                    </div>
+
+                    <div>
+                        <div className="flex-between mb-2">
+                            <label className="text-sm font-bold text-secondary uppercase">Stock Critique (mois)</label>
+                            <span className="text-red font-mono font-bold">× {coefficients.critical}</span>
+                        </div>
+                        <input
+                            type="range"
+                            min="0.5" max="2" step="0.1"
+                            value={coefficients.critical}
+                            onChange={(e) => setCoefficients({ ...coefficients, critical: parseFloat(e.target.value) })}
                             className="w-full accent-red-500 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer"
                         />
                         <p className="text-xs text-secondary mt-2">
-                            En dessous de {thresholds.CRITICAL} unités, le médicament apparaîtra en <span className="text-red">Rouge</span>.
+                            Alerte <span className="text-red">Rouge</span> : Consommation Moyenne × {coefficients.critical} mois
                         </p>
                     </div>
 
+                    <div>
+                        <div className="flex-between mb-2">
+                            <label className="text-sm font-bold text-secondary uppercase">Minimum Absolu (ampoules)</label>
+                            <span className="text-purple font-mono font-bold">{coefficients.minAbsolute}</span>
+                        </div>
+                        <input
+                            type="range"
+                            min="1" max="10" step="1"
+                            value={coefficients.minAbsolute}
+                            onChange={(e) => setCoefficients({ ...coefficients, minAbsolute: parseInt(e.target.value) })}
+                            className="w-full accent-purple-500 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                        />
+                        <p className="text-xs text-secondary mt-2">
+                            Seuil plancher pour les médicaments à faible consommation
+                        </p>
+                    </div>
+
+                    {/* Consumption Stats Button */}
+                    <div className="pt-4 border-t border-white/5">
+                        <button
+                            onClick={() => setShowConsumptionStats(true)}
+                            className="btn w-full bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-500/20"
+                        >
+                            <BarChart3 size={18} /> Voir Moyennes de Consommation par Médicament
+                        </button>
+                    </div>
+
+                    {/* Save Button */}
                     <div className="flex justify-end pt-4 border-t border-white/5">
-                        {prefMsg && <span className="text-emerald mr-4 flex items-center gap-2 animate-pulse"><CheckCircle size={16} /> {prefMsg}</span>}
-                        <button onClick={handleSavePreferences} className="btn bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20">
-                            <Save size={18} /> Enregistrer les préférences
+                        {alertMsg && <span className="text-emerald mr-4 flex items-center gap-2 animate-pulse"><CheckCircle size={16} /> {alertMsg}</span>}
+                        <button onClick={handleSaveCoefficients} className="btn bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20">
+                            <Save size={18} /> Enregistrer les Coefficients
                         </button>
                     </div>
                 </div>
             </div>
+
+            {/* Consumption Stats Modal */}
+            {showConsumptionStats && (
+                <ConsumptionStatsModal
+                    medications={medications}
+                    transactions={transactions}
+                    onClose={() => setShowConsumptionStats(false)}
+                />
+            )}
 
             {/* SECURITY SECTION */}
             <div className="card relative overflow-hidden">
