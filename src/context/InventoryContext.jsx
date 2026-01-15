@@ -120,8 +120,10 @@ export const InventoryProvider = ({ children }) => {
             if (!med) continue;
 
             const newStock = med.stock - parseInt(item.quantity);
-            // Optimistic check
-            if (newStock < 0) console.warn("Stock might be negative!");
+            // Prevent negative stock
+            if (newStock < 0) {
+                throw new Error(`Stock insuffisant pour ${med.name}. Stock actuel: ${med.stock}, demandé: ${item.quantity}`);
+            }
 
             await supabase.from('medications').update({ stock: newStock }).eq('id', item.medId);
         }
@@ -225,7 +227,11 @@ export const InventoryProvider = ({ children }) => {
             theoretical_stock: item.stock,
             physical_stock: item.physicalStock,
             gap: item.gap,
-            comment: item.comment
+            comment: item.comment,
+            // Empty vials tracking for narcotics (added for compliance)
+            expected_empty_vials: item.expectedEmptyVials || null,
+            physical_empty_vials: item.physicalEmptyVials || null,
+            empty_vials_comment: item.emptyVialsComment || null
         }));
 
         const { error: itemsError } = await supabase.from('audit_items').insert(itemsToInsert);

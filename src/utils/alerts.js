@@ -66,7 +66,7 @@ export const getConsumptionTrend = (monthlyData) => {
     if (monthlyData.length < 2) return { trend: 'unknown', percentage: 0 };
 
     const current = monthlyData[0].quantity;
-    const previous = (monthlyData[1].quantity + monthlyData[2]?.quantity || 0) / (monthlyData[2] ? 2 : 1);
+    const previous = (monthlyData[1].quantity + (monthlyData[2]?.quantity || 0)) / (monthlyData[2] ? 2 : 1);
 
     if (previous === 0) return { trend: 'stable', percentage: 0 };
 
