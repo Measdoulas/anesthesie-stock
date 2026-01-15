@@ -59,7 +59,11 @@ const Audit = () => {
             ...med,
             physicalStock: med.stock, // Default to system stock
             gap: 0,
-            comment: ''
+            comment: '',
+            // Empty vial tracking for narcotics
+            expectedEmptyVials: med.isNarcotic ? 0 : null, // Will be calculated if needed
+            physicalEmptyVials: med.isNarcotic ? null : null,
+            emptyVialsComment: ''
         }));
         setAuditData(initialData);
         setViewMode('new');
@@ -73,6 +77,19 @@ const Audit = () => {
                     ...item,
                     physicalStock: physical,
                     gap: physical - item.stock
+                };
+            }
+            return item;
+        }));
+    };
+
+    const handleEmptyVialsChange = (id, value) => {
+        const physical = parseInt(value) || 0;
+        setAuditData(prev => prev.map(item => {
+            if (item.id === id) {
+                return {
+                    ...item,
+                    physicalEmptyVials: physical
                 };
             }
             return item;
@@ -342,49 +359,84 @@ const Audit = () => {
                         </thead>
                         <tbody>
                             {filteredAuditData.map(item => (
-                                <tr key={item.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                    <td style={{ padding: '0.75rem 0.5rem', fontWeight: '500' }}>{item.name}</td>
-                                    <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{item.stock}</td>
-                                    <td style={{ textAlign: 'center' }}>
-                                        <input
-                                            type="number"
-                                            className="input-field"
-                                            style={{
-                                                textAlign: 'center', fontWeight: 'bold',
-                                                background: 'rgba(15, 23, 42, 0.5)',
-                                                borderColor: 'rgba(255,255,255,0.1)',
-                                                width: '100px',
-                                                margin: '0 auto'
-                                            }}
-                                            value={item.physicalStock}
-                                            onChange={(e) => handleStockChange(item.id, e.target.value)}
-                                            onFocus={(e) => e.target.select()}
-                                            min="0"
-                                        />
-                                    </td>
-                                    <td style={{ textAlign: 'center', fontWeight: 'bold' }}>
-                                        <span style={{ color: item.gap === 0 ? 'var(--accent-secondary)' : 'var(--accent-warning)' }}>
-                                            {item.gap > 0 ? `+${item.gap}` : item.gap}
-                                        </span>
-                                    </td>
-                                    <td style={{ padding: '0.75rem 0' }}>
-                                        <input
-                                            type="text"
-                                            className="input-field"
-                                            style={{
-                                                fontSize: '0.85rem',
-                                                padding: '0.4rem',
-                                                background: 'transparent',
-                                                border: '1px solid transparent'
-                                            }}
-                                            onFocus={(e) => e.target.style.borderColor = 'var(--accent-primary)'}
-                                            onBlur={(e) => e.target.style.borderColor = 'transparent'}
-                                            placeholder="..."
-                                            value={item.comment}
-                                            onChange={(e) => handleCommentChange(item.id, e.target.value)}
-                                        />
-                                    </td>
-                                </tr>
+                                <React.Fragment key={item.id}>
+                                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                        <td style={{ padding: '0.75rem 0.5rem', fontWeight: '500' }}>{item.name}</td>
+                                        <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{item.stock}</td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            <input
+                                                type="number"
+                                                className="input-field"
+                                                style={{
+                                                    textAlign: 'center', fontWeight: 'bold',
+                                                    background: 'rgba(15, 23, 42, 0.5)',
+                                                    borderColor: 'rgba(255,255,255,0.1)',
+                                                    width: '100px',
+                                                    margin: '0 auto'
+                                                }}
+                                                value={item.physicalStock}
+                                                onChange={(e) => handleStockChange(item.id, e.target.value)}
+                                                onFocus={(e) => e.target.select()}
+                                                min="0"
+                                            />
+                                        </td>
+                                        <td style={{ textAlign: 'center', fontWeight: 'bold' }}>
+                                            <span style={{ color: item.gap === 0 ? 'var(--accent-secondary)' : 'var(--accent-warning)' }}>
+                                                {item.gap > 0 ? `+${item.gap}` : item.gap}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: '0.75rem 0' }}>
+                                            <input
+                                                type="text"
+                                                className="input-field"
+                                                style={{
+                                                    fontSize: '0.85rem',
+                                                    padding: '0.4rem',
+                                                    background: 'transparent',
+                                                    border: '1px solid transparent'
+                                                }}
+                                                onFocus={(e) => e.target.style.borderColor = 'var(--accent-primary)'}
+                                                onBlur={(e) => e.target.style.borderColor = 'transparent'}
+                                                placeholder="..."
+                                                value={item.comment}
+                                                onChange={(e) => handleCommentChange(item.id, e.target.value)}
+                                            />
+                                        </td>
+                                    </tr>
+                                    {/* Empty Vial Row for Narcotics */}
+                                    {item.isNarcotic && (
+                                        <tr key={`${item.id}-vials`} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', backgroundColor: 'rgba(168, 85, 247, 0.05)' }}>
+                                            <td colSpan="2" style={{ padding: '0.5rem 0.5rem 0.5rem 2rem', fontSize: '0.85rem', color: 'var(--accent-primary)' }}>
+                                                💊 Ampoules Vides (Stupéfiant)
+                                            </td>
+                                            <td style={{ textAlign: 'center', padding: '0.5rem' }}>
+                                                <input
+                                                    type="number"
+                                                    className="input-field"
+                                                    style={{
+                                                        textAlign: 'center',
+                                                        fontSize: '0.85rem',
+                                                        background: 'rgba(168, 85, 247, 0.1)',
+                                                        borderColor: 'rgba(168, 85, 247, 0.3)',
+                                                        width: '80px',
+                                                        margin: '0 auto',
+                                                        padding: '0.3rem'
+                                                    }}
+                                                    value={item.physicalEmptyVials || ''}
+                                                    onChange={(e) => handleEmptyVialsChange(item.id, e.target.value)}
+                                                    placeholder="Comptées"
+                                                    min="0"
+                                                />
+                                            </td>
+                                            <td style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                                -
+                                            </td>
+                                            <td style={{ padding: '0.5rem', fontSize: '0.75rem', fontStyle: 'italic', color: 'var(--text-secondary)' }}>
+                                                Ampoules vidées conservées pour contrôle
+                                            </td>
+                                        </tr>
+                                    )}
+                                </React.Fragment>
                             ))}
                         </tbody>
                     </table>
