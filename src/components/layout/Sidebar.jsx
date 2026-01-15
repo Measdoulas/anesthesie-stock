@@ -15,8 +15,8 @@ const Sidebar = ({ isOpen }) => {
     const navItems = [
         { icon: LayoutDashboard, label: 'Tableau de bord', to: '/' },
         { icon: Package, label: 'Inventaire', to: '/inventory' },
-        { icon: PlusCircle, label: 'Entrées Stock', to: '/entry' },
-        { icon: MinusCircle, label: 'Sorties Patient', to: '/exit' },
+        { icon: PlusCircle, label: 'Entrées Médicaments', to: '/entry' },
+        { icon: MinusCircle, label: 'Sorties Médicament', to: '/exit' },
         { icon: BarChart3, label: 'Statistiques', to: '/stats' },
         { icon: ClipboardList, label: 'Audit / Contrôle', to: '/audit' },
         { icon: Settings, label: 'Paramètres', to: '/settings' },

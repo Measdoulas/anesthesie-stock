@@ -47,7 +47,9 @@ const Dashboard = () => {
                 </div>
             </div>
 
+
             <div className="grid-4">
+                {/* Stock Total - Keep as StatCard */}
                 <StatCard
                     title="Stock Total"
                     value={medications.reduce((acc, m) => acc + (m.stock || 0), 0)}
@@ -55,27 +57,89 @@ const Dashboard = () => {
                     colorClass="text-blue"
                     bgClass="bg-blue-light"
                 />
-                <StatCard
-                    title="Stock Faible"
-                    value={lowStockCount}
-                    icon={AlertCircle}
-                    colorClass="text-amber"
-                    bgClass="bg-amber-light"
-                />
-                <StatCard
-                    title="Stock Critique"
-                    value={criticalStockCount}
-                    icon={AlertTriangle}
-                    colorClass="text-red"
-                    bgClass="bg-red-light"
-                />
-                <StatCard
-                    title="Péremption Proche"
-                    value={expiringCount}
-                    icon={Clock}
-                    colorClass="text-purple"
-                    bgClass="bg-purple-light"
-                />
+
+                {/* Stock Faible - Detailed */}
+                <div className="card" style={{ padding: '1rem' }}>
+                    <div className="flex-center gap-2 mb-3" style={{ justifyContent: 'flex-start' }}>
+                        <div className="flex-center bg-amber-light text-amber" style={{ borderRadius: '50%', padding: '0.5rem', width: '40px', height: '40px' }}>
+                            <AlertCircle size={20} />
+                        </div>
+                        <div>
+                            <p className="text-xs font-medium">Stock Faible</p>
+                            <h4 style={{ fontSize: '1.2rem', fontWeight: 'bold', margin: 0 }}>{lowStockCount}</h4>
+                        </div>
+                    </div>
+                    {lowStockCount > 0 && (
+                        <div style={{ maxHeight: '120px', overflowY: 'auto', fontSize: '0.75rem' }}>
+                            {medications.filter(m => getStockStatus(m.stock) === 'low').map(med => (
+                                <div key={med.id} className="flex-between" style={{ padding: '0.25rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <span style={{ color: 'var(--text-primary)' }}>{med.name}</span>
+                                    <span className="badge" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', color: 'var(--accent-warning)', fontSize: '0.7rem', padding: '0.1rem 0.4rem' }}>
+                                        {med.stock} amp
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Stock Critique - Detailed */}
+                <div className="card" style={{ padding: '1rem' }}>
+                    <div className="flex-center gap-2 mb-3" style={{ justifyContent: 'flex-start' }}>
+                        <div className="flex-center bg-red-light text-red" style={{ borderRadius: '50%', padding: '0.5rem', width: '40px', height: '40px' }}>
+                            <AlertTriangle size={20} />
+                        </div>
+                        <div>
+                            <p className="text-xs font-medium">Stock Critique</p>
+                            <h4 style={{ fontSize: '1.2rem', fontWeight: 'bold', margin: 0 }}>{criticalStockCount}</h4>
+                        </div>
+                    </div>
+                    {criticalStockCount > 0 && (
+                        <div style={{ maxHeight: '120px', overflowY: 'auto', fontSize: '0.75rem' }}>
+                            {medications.filter(m => getStockStatus(m.stock) === 'critical').map(med => (
+                                <div key={med.id} className="flex-between" style={{ padding: '0.25rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <span style={{ color: 'var(--text-primary)' }}>{med.name}</span>
+                                    <span className="badge" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-danger)', fontSize: '0.7rem', padding: '0.1rem 0.4rem' }}>
+                                        {med.stock} amp
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Péremption Proche - Detailed */}
+                <div className="card" style={{ padding: '1rem' }}>
+                    <div className="flex-center gap-2 mb-3" style={{ justifyContent: 'flex-start' }}>
+                        <div className="flex-center bg-purple-light text-purple" style={{ borderRadius: '50%', padding: '0.5rem', width: '40px', height: '40px' }}>
+                            <Clock size={20} />
+                        </div>
+                        <div>
+                            <p className="text-xs font-medium">Péremption Proche</p>
+                            <h4 style={{ fontSize: '1.2rem', fontWeight: 'bold', margin: 0 }}>{expiringCount}</h4>
+                        </div>
+                    </div>
+                    {expiringCount > 0 && (
+                        <div style={{ maxHeight: '120px', overflowY: 'auto', fontSize: '0.75rem' }}>
+                            {medications.filter(m => {
+                                const status = getExpirationStatus(m.expiry);
+                                return status === 'critical' || status === 'warning';
+                            }).map(med => (
+                                <div key={med.id} className="flex-between" style={{ padding: '0.25rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <span style={{ color: 'var(--text-primary)' }}>{med.name}</span>
+                                    <span className="badge" style={{
+                                        backgroundColor: getExpirationStatus(med.expiry) === 'critical' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(168, 85, 247, 0.1)',
+                                        color: getExpirationStatus(med.expiry) === 'critical' ? 'var(--accent-danger)' : 'var(--accent-primary)',
+                                        fontSize: '0.7rem',
+                                        padding: '0.1rem 0.4rem'
+                                    }}>
+                                        {med.expiry ? format(new Date(med.expiry), 'dd/MM', { locale: fr }) : 'N/A'}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
 
             <div className="grid-2" style={{ gridTemplateColumns: '2fr 1fr' }}>

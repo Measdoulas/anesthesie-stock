@@ -8,7 +8,7 @@ const Validation = () => {
     const { transactions, validateReception, invalidateReception, validateIncident } = useInventory();
     const [successMsg, setSuccessMsg] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
-    const [activeTab, setActiveTab] = useState('pending'); // 'pending', 'incidents', 'history'
+    const [activeTab, setActiveTab] = useState('pending'); // 'pending', 'incidents', 'history-validations', 'history-incidents'
 
     // Group PENDING transactions (Receptions)
     const pendingReceptions = React.useMemo(() => {
@@ -34,7 +34,7 @@ const Validation = () => {
             .sort((a, b) => new Date(b.date) - new Date(a.date));
     }, [transactions]);
 
-    // Group VALIDATED transactions (History)
+    // Group VALIDATED transactions (History Validations)
     const historyReceptions = React.useMemo(() => {
         const receptions = {};
         transactions.filter(t => t.type === 'IN' && t.status === 'VALIDATED').forEach(t => {
@@ -51,6 +51,12 @@ const Validation = () => {
         });
         // Newest first for history
         return Object.values(receptions).sort((a, b) => new Date(b.date) - new Date(a.date));
+    }, [transactions]);
+
+    // History Incidents (Validated/Rejected)
+    const historyIncidents = React.useMemo(() => {
+        return transactions.filter(t => t.category === 'INCIDENT' && (t.status === 'VALIDATED' || t.status === 'REJECTED'))
+            .sort((a, b) => new Date(b.date) - new Date(a.date));
     }, [transactions]);
 
     const handleValidate = async (receptionId) => {
@@ -167,7 +173,8 @@ const Validation = () => {
                 }}>
                     <TabButton id="pending" label="Réceptions" icon={Clock} color="#a855f7" count={pendingReceptions.length} />
                     <TabButton id="incidents" label="Avaries" icon={AlertTriangle} color="#f59e0b" count={pendingIncidents.length} />
-                    <TabButton id="history" label="Historique" icon={CheckCircle} color="#10b981" />
+                    <TabButton id="history-validations" label="Hist. Validations" icon={CheckCircle} color="#10b981" />
+                    <TabButton id="history-incidents" label="Hist. Avaries" icon={XCircle} color="#6b7280" />
                 </div>
             </div>
 
@@ -283,12 +290,14 @@ const Validation = () => {
                 )
             )}
 
-            {activeTab === 'history' && (
+
+            {/* History Validations Tab */}
+            {activeTab === 'history-validations' && (
                 historyReceptions.length === 0 ? (
                     <div className="card text-center py-12 border-dashed border-2 border-slate-700">
                         <Clock size={48} className="text-secondary mx-auto mb-4" />
-                        <h3 className="text-xl mb-2">Aucun historique</h3>
-                        <p className="text-secondary">Aucune validation effectuée pour le moment.</p>
+                        <h3 className="text-xl mb-2">Aucune validation</h3>
+                        <p className="text-secondary">Aucune réception validée pour le moment.</p>
                     </div>
                 ) : (
                     <div className="flex-col gap-6">
@@ -328,6 +337,51 @@ const Validation = () => {
                                         </tbody>
                                     </table>
                                 </div>
+                            </div>
+                        ))}
+                    </div>
+                )
+            )}
+
+            {/* History Incidents Tab */}
+            {activeTab === 'history-incidents' && (
+                historyIncidents.length === 0 ? (
+                    <div className="card text-center py-12 border-dashed border-2 border-slate-700">
+                        <CheckCircle size={48} className="text-secondary mx-auto mb-4" />
+                        <h3 className="text-xl mb-2">Aucun incident traité</h3>
+                        <p className="text-secondary">Aucune avarie validée ou rejetée.</p>
+                    </div>
+                ) : (
+                    <div className="flex-col gap-4">
+                        {historyIncidents.map(incident => (
+                            <div key={incident.id} className="card" style={{
+                                borderLeft: `4px solid ${incident.status === 'VALIDATED' ? 'var(--accent-danger)' : 'var(--text-secondary)'}`,
+                                opacity: 0.8
+                            }}>
+                                <div className="flex-between mb-2">
+                                    <div>
+                                        <h4 className="font-bold text-lg">{incident.medName}</h4>
+                                        <p className="text-sm text-secondary">
+                                            {format(new Date(incident.date), 'dd MMM yyyy HH:mm', { locale: fr })}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className={`badge ${incident.status === 'VALIDATED'
+                                                ? 'bg-red-light text-red border border-red/20'
+                                                : 'bg-slate-700 text-slate-400 border border-slate-600'
+                                            }`}>
+                                            {incident.status === 'VALIDATED' ? '✓ Validé' : '✕ Rejeté'}
+                                        </span>
+                                        <span className="badge bg-amber-500/10 text-amber-500">-{incident.quantity} amp</span>
+                                    </div>
+                                </div>
+                                <div className="text-sm">
+                                    <span className="text-secondary">Raison : </span>
+                                    <span className="font-medium">{incident.details?.reason || 'Non spécifié'}</span>
+                                </div>
+                                {incident.details?.comment && (
+                                    <p className="text-xs text-secondary mt-2 italic">"{incident.details.comment}"</p>
+                                )}
                             </div>
                         ))}
                     </div>
