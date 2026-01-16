@@ -144,28 +144,36 @@ const Audit = () => {
         doc.setFillColor(15, 23, 42); // slate-900
         doc.rect(0, 0, 210, 50, 'F');
 
-        // Logo Circle (left side)
-        doc.setFillColor(168, 85, 247); // Purple accent
-        doc.circle(25, 25, 12, 'F');
+        // Hospital Logo (left side)
+        // Load logo from public folder
+        const logoImg = new Image();
+        logoImg.src = '/logo.jpg';
 
-        // Logo Text - Medical Cross Symbol
-        doc.setFontSize(20);
-        doc.setTextColor(255, 255, 255);
-        doc.text('✚', 25, 28, { align: 'center' });
+        try {
+            // Add logo image (20x20mm square at position 10, 15)
+            doc.addImage(logoImg, 'JPEG', 10, 15, 20, 20);
+        } catch (error) {
+            // Fallback: Draw a purple circle with cross if image fails
+            doc.setFillColor(168, 85, 247);
+            doc.circle(20, 25, 8, 'F');
+            doc.setFontSize(16);
+            doc.setTextColor(255, 255, 255);
+            doc.text('+', 20, 27, { align: 'center' });
+        }
 
         // Hospital Name and Title (center/right)
         doc.setFontSize(11);
         doc.setTextColor(148, 163, 184); // slate-400
-        doc.text('HÔPITAL BRAUN CINKASSÉ', 45, 18);
+        doc.text('HÔPITAL BRAUN CINKASSÉ', 38, 18);
 
         doc.setFontSize(22);
         doc.setTextColor(255, 255, 255);
-        doc.text("RAPPORT D'AUDIT", 45, 30);
+        doc.text("RAPPORT D'AUDIT", 38, 30);
 
         // Subtitle - Generated date
         doc.setFontSize(9);
         doc.setTextColor(148, 163, 184); // slate-400
-        doc.text(`Généré le ${dateStr}`, 45, 38);
+        doc.text(`Généré le ${dateStr}`, 38, 38);
 
         // Meta Info Section
         doc.setTextColor(0);
