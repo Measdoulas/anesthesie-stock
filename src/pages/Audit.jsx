@@ -203,6 +203,74 @@ const Audit = () => {
             }
         });
 
+        // === SECTION AMPOULES VIDES (STUPÉFIANTS) ===
+        const narcoticItems = items.filter(item => {
+            // Check if medication is narcotic (isNarcotic field)
+            const med = medications.find(m => m.id === (item.id || item.med_id));
+            return med?.isNarcotic && item.physicalEmptyVials !== null && item.physicalEmptyVials !== undefined;
+        });
+
+        if (narcoticItems.length > 0) {
+            const currentY = doc.lastAutoTable.finalY + 15;
+
+            // Section Header
+            doc.setFillColor(168, 85, 247); // Purple for narcotics
+            doc.rect(14, currentY, 182, 8, 'F');
+            doc.setFontSize(11);
+            doc.setTextColor(255, 255, 255);
+            doc.text('💊 VÉRIFICATION AMPOULES VIDES (STUPÉFIANTS)', 16, currentY + 5.5);
+
+            // Narcotic vials table
+            const vialsColumn = ["Stupéfiant", "Attendues", "Comptées", "Écart", "Observation"];
+            const vialsRows = narcoticItems.map(item => {
+                const expected = item.expectedEmptyVials || 0;
+                const physical = item.physicalEmptyVials || 0;
+                const gap = physical - expected;
+                return [
+                    item.name || item.med_name,
+                    expected.toString(),
+                    physical.toString(),
+                    (gap > 0 ? '+' : '') + gap,
+                    gap !== 0 ? '⚠️ Écart détecté' : '✓ Conforme'
+                ];
+            });
+
+            autoTable(doc, {
+                head: [vialsColumn],
+                body: vialsRows,
+                startY: currentY + 10,
+                styles: { fontSize: 9, cellPadding: 3 },
+                headStyles: { fillColor: [147, 51, 234], textColor: 255 }, // Purple-700
+                alternateRowStyles: { fillColor: [250, 245, 255] }, // Purple-50
+                didParseCell: function (data) {
+                    if (data.section === 'body' && data.column.index === 3) {
+                        const val = parseInt(data.cell.raw);
+                        if (val !== 0) {
+                            data.cell.styles.textColor = [220, 38, 38]; // Red for discrepancy
+                            data.cell.styles.fontStyle = 'bold';
+                        } else {
+                            data.cell.styles.textColor = [22, 163, 74]; // Green for OK
+                        }
+                    }
+                    // Highlight "Observation" column if discrepancy
+                    if (data.section === 'body' && data.column.index === 4) {
+                        if (data.cell.raw.includes('⚠️')) {
+                            data.cell.styles.textColor = [217, 119, 6]; // Amber
+                            data.cell.styles.fontStyle = 'bold';
+                        } else {
+                            data.cell.styles.textColor = [22, 163, 74]; // Green
+                        }
+                    }
+                }
+            });
+
+            // Compliance note
+            const noteY = doc.lastAutoTable.finalY + 8;
+            doc.setFontSize(8);
+            doc.setTextColor(100);
+            doc.text('Note: Les ampoules vides de stupéfiants doivent être conservées et comptabilisées conformément à la réglementation.', 14, noteY);
+        }
+
         // Signatures
         // Access finalY via doc.lastAutoTable.finalY
         const finalY = doc.lastAutoTable.finalY + 20;
