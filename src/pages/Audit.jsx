@@ -277,11 +277,8 @@ const Audit = () => {
 
         // === SECTION AMPOULES VIDES (STUPÉFIANTS) ===
         // CRITICAL: Show ALL narcotics for regulatory compliance, regardless of data entry
-        console.log("DEBUG PDF: Total items:", items.length);
-        console.log("DEBUG PDF: Sample item:", items[0]);
         // Check BOTH formats: isNarcotic (from auditData) and is_narcotic (from DB)
         const narcoticItems = items.filter(item => item.is_narcotic === true || item.isNarcotic === true);
-        console.log("DEBUG PDF: Narcotic items found:", narcoticItems.length, narcoticItems);
 
         if (narcoticItems.length > 0) {
             const currentY = doc.lastAutoTable.finalY + 15;
