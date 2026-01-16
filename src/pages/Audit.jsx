@@ -614,49 +614,53 @@ const Audit = () => {
                 </div>
 
                 {/* === EMPTY VIALS SECTION FOR NARCOTICS === */}
-                {selectedAudit?.items?.some(item => item.physical_empty_vials !== null && item.physical_empty_vials !== undefined) && (
-                    <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '2px solid rgba(168, 85, 247, 0.2)' }}>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            💊 Vérification Ampoules Vides (Stupéfiants)
-                        </h3>
-                        <div className="table-container">
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                <thead>
-                                    <tr style={{ textAlign: 'left', color: 'var(--text-secondary)', background: 'rgba(168, 85, 247, 0.1)' }}>
-                                        <th style={{ paddingBottom: '1rem', paddingLeft: '0.5rem', paddingTop: '0.5rem' }}>Stupéfiant</th>
-                                        <th style={{ paddingBottom: '1rem', textAlign: 'center', paddingTop: '0.5rem' }}>Attendues</th>
-                                        <th style={{ paddingBottom: '1rem', textAlign: 'center', paddingTop: '0.5rem' }}>Comptées</th>
-                                        <th style={{ paddingBottom: '1rem', textAlign: 'center', paddingTop: '0.5rem' }}>Écart</th>
-                                        <th style={{ paddingBottom: '1rem', paddingLeft: '0.5rem', paddingTop: '0.5rem' }}>Statut</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {selectedAudit?.items?.filter(item => item.physical_empty_vials !== null && item.physical_empty_vials !== undefined).map(item => {
-                                        const expected = item.expected_empty_vials || 0;
-                                        const physical = item.physical_empty_vials || 0;
-                                        const gap = physical - expected;
-                                        return (
-                                            <tr key={`vials-${item.id}`} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                                <td style={{ padding: '0.75rem 0.5rem', fontWeight: '500' }}>{item.med_name}</td>
-                                                <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{expected}</td>
-                                                <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{physical}</td>
-                                                <td style={{ textAlign: 'center', fontWeight: 'bold', color: gap !== 0 ? 'var(--accent-warning)' : 'var(--accent-secondary)' }}>
-                                                    {gap > 0 ? '+' : ''}{gap}
-                                                </td>
-                                                <td style={{ padding: '0.75rem 0.5rem', fontSize: '0.9rem', color: gap !== 0 ? 'var(--accent-warning)' : 'var(--accent-secondary)', fontWeight: '500' }}>
-                                                    {gap !== 0 ? '⚠️ Écart détecté' : '✓ Conforme'}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
+                {/* Show if any item has empty vial data OR is a narcotic (fallback to show empty fields) */}
+                {selectedAudit?.items?.some(item =>
+                    (item.physical_empty_vials !== null && item.physical_empty_vials !== undefined) ||
+                    (item.physicalEmptyVials !== null && item.physicalEmptyVials !== undefined)
+                ) && (
+                        <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '2px solid rgba(168, 85, 247, 0.2)' }}>
+                            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                💊 Vérification Ampoules Vides (Stupéfiants)
+                            </h3>
+                            <div className="table-container">
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr style={{ textAlign: 'left', color: 'var(--text-secondary)', background: 'rgba(168, 85, 247, 0.1)' }}>
+                                            <th style={{ paddingBottom: '1rem', paddingLeft: '0.5rem', paddingTop: '0.5rem' }}>Stupéfiant</th>
+                                            <th style={{ paddingBottom: '1rem', textAlign: 'center', paddingTop: '0.5rem' }}>Attendues</th>
+                                            <th style={{ paddingBottom: '1rem', textAlign: 'center', paddingTop: '0.5rem' }}>Comptées</th>
+                                            <th style={{ paddingBottom: '1rem', textAlign: 'center', paddingTop: '0.5rem' }}>Écart</th>
+                                            <th style={{ paddingBottom: '1rem', paddingLeft: '0.5rem', paddingTop: '0.5rem' }}>Statut</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {selectedAudit?.items?.filter(item => item.physical_empty_vials !== null && item.physical_empty_vials !== undefined).map(item => {
+                                            const expected = item.expected_empty_vials || 0;
+                                            const physical = item.physical_empty_vials || 0;
+                                            const gap = physical - expected;
+                                            return (
+                                                <tr key={`vials-${item.id}`} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                                    <td style={{ padding: '0.75rem 0.5rem', fontWeight: '500' }}>{item.med_name}</td>
+                                                    <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{expected}</td>
+                                                    <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{physical}</td>
+                                                    <td style={{ textAlign: 'center', fontWeight: 'bold', color: gap !== 0 ? 'var(--accent-warning)' : 'var(--accent-secondary)' }}>
+                                                        {gap > 0 ? '+' : ''}{gap}
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem 0.5rem', fontSize: '0.9rem', color: gap !== 0 ? 'var(--accent-warning)' : 'var(--accent-secondary)', fontWeight: '500' }}>
+                                                        {gap !== 0 ? '⚠️ Écart détecté' : '✓ Conforme'}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p style={{ marginTop: '1rem', fontSize: '0.875rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                                Note: Les ampoules vides de stupéfiants doivent être conservées et comptabilisées conformément à la réglementation.
+                            </p>
                         </div>
-                        <p style={{ marginTop: '1rem', fontSize: '0.875rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-                            Note: Les ampoules vides de stupéfiants doivent être conservées et comptabilisées conformément à la réglementation.
-                        </p>
-                    </div>
-                )}
+                    )}
             </div>
         </div>
     );
