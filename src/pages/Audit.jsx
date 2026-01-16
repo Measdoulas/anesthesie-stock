@@ -565,7 +565,7 @@ const Audit = () => {
                                                         margin: '0 auto',
                                                         padding: '0.3rem'
                                                     }}
-                                                    value={item.physicalEmptyVials || ''}
+                                                    value={item.physicalEmptyVials ?? ''}
                                                     onChange={(e) => handleEmptyVialsChange(item.id, e.target.value)}
                                                     placeholder="Comptées"
                                                     min="0"
