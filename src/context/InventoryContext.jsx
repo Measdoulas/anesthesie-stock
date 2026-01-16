@@ -231,9 +231,10 @@ export const InventoryProvider = ({ children }) => {
             // Narcotic status for filtering in reports (CRITICAL FOR COMPLIANCE)
             is_narcotic: item.isNarcotic || false,
             // Empty vials tracking for narcotics (added for compliance)
-            expected_empty_vials: item.expectedEmptyVials || null,
-            physical_empty_vials: item.physicalEmptyVials || null,
-            empty_vials_comment: item.emptyVialsComment || null
+            // Use ?? to preserve 0 values (0 || null would give null, but 0 ?? null gives 0)
+            expected_empty_vials: item.expectedEmptyVials ?? null,
+            physical_empty_vials: item.physicalEmptyVials ?? null,
+            empty_vials_comment: item.emptyVialsComment ?? null
         }));
 
         const { error: itemsError } = await supabase.from('audit_items').insert(itemsToInsert);

@@ -130,7 +130,8 @@ const Audit = () => {
     };
 
     const handleEmptyVialsChange = (id, value) => {
-        const physical = parseInt(value) || 0;
+        // Distinguish between empty field (null) and zero entered (0)
+        const physical = value === '' || value === null || value === undefined ? null : parseInt(value);
         setAuditData(prev => prev.map(item => {
             if (item.id === id) {
                 return {
