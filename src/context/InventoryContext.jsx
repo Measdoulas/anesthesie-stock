@@ -228,6 +228,8 @@ export const InventoryProvider = ({ children }) => {
             physical_stock: item.physicalStock,
             gap: item.gap,
             comment: item.comment,
+            // Narcotic status for filtering in reports (CRITICAL FOR COMPLIANCE)
+            is_narcotic: item.isNarcotic || false,
             // Empty vials tracking for narcotics (added for compliance)
             expected_empty_vials: item.expectedEmptyVials || null,
             physical_empty_vials: item.physicalEmptyVials || null,

@@ -53,18 +53,64 @@ const Audit = () => {
         }
     };
 
-    const startNewAudit = () => {
-        // Init snapshot with current system stock
-        const initialData = medications.map(med => ({
-            ...med,
-            physicalStock: med.stock, // Default to system stock
-            gap: 0,
-            comment: '',
-            // Empty vial tracking for narcotics
-            expectedEmptyVials: med.isNarcotic ? 0 : null, // Will be calculated if needed
-            physicalEmptyVials: med.isNarcotic ? null : null,
-            emptyVialsComment: ''
-        }));
+    const startNewAudit = async () => {
+        // Get last audit date for calculating expected empty vials
+        let lastAuditDate = null;
+        try {
+            const { data: lastAudit } = await supabase
+                .from('audits')
+                .select('created_at')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+
+            if (lastAudit) {
+                lastAuditDate = lastAudit.created_at;
+            }
+        } catch (error) {
+            // No previous audit, use last 30 days as default
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            lastAuditDate = thirtyDaysAgo.toISOString();
+        }
+
+        // For each medication, calculate expected empty vials if narcotic
+        const initialData = await Promise.all(
+            medications.map(async (med) => {
+                let expectedEmptyVials = null;
+
+                if (med.isNarcotic && lastAuditDate) {
+                    // Calculate expected vials = sum of OUT quantities since last audit
+                    const { data: outTransactions } = await supabase
+                        .from('transactions')
+                        .select('quantity')
+                        .eq('medId', med.id)
+                        .eq('type', 'OUT')
+                        .gte('created_at', lastAuditDate);
+
+                    if (outTransactions && outTransactions.length > 0) {
+                        expectedEmptyVials = outTransactions.reduce(
+                            (sum, t) => sum + (parseInt(t.quantity) || 0),
+                            0
+                        );
+                    } else {
+                        expectedEmptyVials = 0; // No usage since last audit
+                    }
+                }
+
+                return {
+                    ...med,
+                    physicalStock: med.stock, // Default to system stock
+                    gap: 0,
+                    comment: '',
+                    // Empty vial tracking for narcotics
+                    expectedEmptyVials: expectedEmptyVials,
+                    physicalEmptyVials: med.isNarcotic ? null : null, // Will be filled by user
+                    emptyVialsComment: ''
+                };
+            })
+        );
+
         setAuditData(initialData);
         setViewMode('new');
     };
@@ -229,12 +275,8 @@ const Audit = () => {
         });
 
         // === SECTION AMPOULES VIDES (STUPÉFIANTS) ===
-        // Filter items that have empty vials data (narcotics)
-        // Check both camelCase (new audits) and snake_case (from database)
-        const narcoticItems = items.filter(item => {
-            const physicalVials = item.physicalEmptyVials || item.physical_empty_vials;
-            return physicalVials !== null && physicalVials !== undefined;
-        });
+        // CRITICAL: Show ALL narcotics for regulatory compliance, regardless of data entry
+        const narcoticItems = items.filter(item => item.is_narcotic === true);
 
         if (narcoticItems.length > 0) {
             const currentY = doc.lastAutoTable.finalY + 15;
@@ -249,15 +291,21 @@ const Audit = () => {
             // Narcotic vials table
             const vialsColumn = ["Stupefiant", "Attendues", "Comptees", "Ecart", "Observation"];
             const vialsRows = narcoticItems.map(item => {
-                const expected = item.expectedEmptyVials || item.expected_empty_vials || 0;
-                const physical = item.physicalEmptyVials || item.physical_empty_vials || 0;
-                const gap = physical - expected;
+                const expected = item.expectedEmptyVials ?? item.expected_empty_vials ?? 0;
+                const physical = item.physicalEmptyVials ?? item.physical_empty_vials;
+
+                // Handle missing data
+                const displayPhysical = (physical !== null && physical !== undefined) ? physical.toString() : 'N/A';
+                const gap = (physical !== null && physical !== undefined) ? (physical - expected) : null;
+                const displayGap = gap !== null ? ((gap > 0 ? '+' : '') + gap) : '-';
+                const status = gap === null ? 'NON RENSEIGNE' : (gap !== 0 ? 'ECART DETECTE' : 'CONFORME');
+
                 return [
                     item.name || item.med_name,
                     expected.toString(),
-                    physical.toString(),
-                    (gap > 0 ? '+' : '') + gap,
-                    gap !== 0 ? 'ECART DETECTE' : 'CONFORME'
+                    displayPhysical,
+                    displayGap,
+                    status
                 ];
             });
 
@@ -635,24 +683,29 @@ const Audit = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {selectedAudit?.items?.filter(item => item.physical_empty_vials !== null && item.physical_empty_vials !== undefined).map(item => {
-                                            const expected = item.expected_empty_vials || 0;
-                                            const physical = item.physical_empty_vials || 0;
-                                            const gap = physical - expected;
+                                        {selectedAudit?.items?.filter(item => item.is_narcotic === true).map(item => {
+                                            const expected = item.expected_empty_vials ?? 0;
+                                            const physical = item.physical_empty_vials;
+
+                                            // Handle missing data
+                                            const displayPhysical = (physical !== null && physical !== undefined) ? physical : 'N/A';
+                                            const gap = (physical !== null && physical !== undefined) ? (physical - expected) : null;
+                                            const hasData = physical !== null && physical !== undefined;
+
                                             return (
                                                 <tr key={`vials-${item.id}`} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                                                     <td style={{ padding: '0.75rem 0.5rem', fontWeight: '500' }}>{item.med_name}</td>
                                                     <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{expected}</td>
-                                                    <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{physical}</td>
+                                                    <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{displayPhysical}</td>
                                                     <td style={{ textAlign: 'center', fontWeight: 'bold', color: gap !== 0 ? 'var(--accent-warning)' : 'var(--accent-secondary)' }}>
-                                                        {gap > 0 ? '+' : ''}{gap}
+                                                        {hasData ? (gap > 0 ? '+' : '') + gap : '-'}
                                                     </td>
                                                     <td style={{ padding: '0.75rem 0.5rem', fontSize: '0.9rem', color: gap !== 0 ? 'var(--accent-warning)' : 'var(--accent-secondary)', fontWeight: '500' }}>
-                                                        {gap !== 0 ? '⚠️ Écart détecté' : '✓ Conforme'}
+                                                        {hasData ? (gap !== 0 ? '⚠️ Écart détecté' : '✓ Conforme') : 'Non renseigné'}
                                                     </td>
                                                 </tr>
                                             );
-                                        })}
+                                        })
                                     </tbody>
                                 </table>
                             </div>
