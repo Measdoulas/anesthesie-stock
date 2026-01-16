@@ -68,6 +68,9 @@ const Sidebar = ({ isOpen }) => {
                     >
                         <LogOut size={14} className="mr-1" /> Déconnexion
                     </button>
+                    <div className="mt-2 text-center text-[10px] text-slate-500">
+                        v4.2.2
+                    </div>
                 </div>
             </div>
         </aside>
