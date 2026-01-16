@@ -548,13 +548,14 @@ const Audit = () => {
                                         </td>
                                     </tr>
                                     {/* Empty Vial Row for Narcotics */}
+                                    {/* Empty Vial Row for Narcotics */}
                                     {item.isNarcotic && (
                                         <tr key={`${item.id}-vials`} style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}>
                                             <td style={{ padding: '0.5rem 0.5rem 0.5rem 2.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                                                 Ampoules vides
                                             </td>
                                             {/* Expected Column (Aligned with Theoretical) */}
-                                            <td style={{ textAlign: 'center', fontSize: '0.9rem', verticalAlign: 'middle', color: 'var(--text-secondary)' }}>
+                                            <td style={{ textAlign: 'center', fontSize: '0.9rem', color: 'var(--text-secondary)', verticalAlign: 'middle' }}>
                                                 {item.expectedEmptyVials ?? 0}
                                             </td>
                                             {/* Physical Input Column */}
@@ -598,7 +599,6 @@ const Audit = () => {
                                                 Ampoules vidées pour contrôle
                                             </td>
                                         </tr>
-                                    )}
                                     )}
                                 </React.Fragment>
                             ))}
