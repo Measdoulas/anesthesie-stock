@@ -230,9 +230,11 @@ const Audit = () => {
 
         // === SECTION AMPOULES VIDES (STUPÉFIANTS) ===
         // Filter items that have empty vials data (narcotics)
-        const narcoticItems = items.filter(item =>
-            item.physicalEmptyVials !== null && item.physicalEmptyVials !== undefined
-        );
+        // Check both camelCase (new audits) and snake_case (from database)
+        const narcoticItems = items.filter(item => {
+            const physicalVials = item.physicalEmptyVials || item.physical_empty_vials;
+            return physicalVials !== null && physicalVials !== undefined;
+        });
 
         if (narcoticItems.length > 0) {
             const currentY = doc.lastAutoTable.finalY + 15;
@@ -242,20 +244,20 @@ const Audit = () => {
             doc.rect(14, currentY, 182, 8, 'F');
             doc.setFontSize(11);
             doc.setTextColor(255, 255, 255);
-            doc.text('💊 VÉRIFICATION AMPOULES VIDES (STUPÉFIANTS)', 16, currentY + 5.5);
+            doc.text('VERIFICATION AMPOULES VIDES (STUPEFIANTS)', 16, currentY + 5.5);
 
             // Narcotic vials table
-            const vialsColumn = ["Stupéfiant", "Attendues", "Comptées", "Écart", "Observation"];
+            const vialsColumn = ["Stupefiant", "Attendues", "Comptees", "Ecart", "Observation"];
             const vialsRows = narcoticItems.map(item => {
-                const expected = item.expectedEmptyVials || 0;
-                const physical = item.physicalEmptyVials || 0;
+                const expected = item.expectedEmptyVials || item.expected_empty_vials || 0;
+                const physical = item.physicalEmptyVials || item.physical_empty_vials || 0;
                 const gap = physical - expected;
                 return [
                     item.name || item.med_name,
                     expected.toString(),
                     physical.toString(),
                     (gap > 0 ? '+' : '') + gap,
-                    gap !== 0 ? '⚠️ Écart détecté' : '✓ Conforme'
+                    gap !== 0 ? 'ECART DETECTE' : 'CONFORME'
                 ];
             });
 
