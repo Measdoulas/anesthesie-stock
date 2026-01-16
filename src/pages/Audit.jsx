@@ -138,37 +138,54 @@ const Audit = () => {
         const doc = new jsPDF();
         const dateStr = format(new Date(meta.date || new Date()), 'dd/MM/yyyy HH:mm');
 
-        // Brand / Header
+        // === PROFESSIONAL HEADER WITH HOSPITAL BRANDING ===
+
+        // Header Background
         doc.setFillColor(15, 23, 42); // slate-900
-        doc.rect(0, 0, 210, 40, 'F');
+        doc.rect(0, 0, 210, 50, 'F');
+
+        // Logo Circle (left side)
+        doc.setFillColor(168, 85, 247); // Purple accent
+        doc.circle(25, 25, 12, 'F');
+
+        // Logo Text - Medical Cross Symbol
+        doc.setFontSize(20);
+        doc.setTextColor(255, 255, 255);
+        doc.text('✚', 25, 28, { align: 'center' });
+
+        // Hospital Name and Title (center/right)
+        doc.setFontSize(11);
+        doc.setTextColor(148, 163, 184); // slate-400
+        doc.text('HÔPITAL BRAUN CINKASSÉ', 45, 18);
 
         doc.setFontSize(22);
         doc.setTextColor(255, 255, 255);
-        doc.text("RAPPORT D'INVENTAIRE", 105, 18, { align: "center" });
+        doc.text("RAPPORT D'AUDIT", 45, 30);
 
-        doc.setFontSize(10);
+        // Subtitle - Generated date
+        doc.setFontSize(9);
         doc.setTextColor(148, 163, 184); // slate-400
-        doc.text(`Généré le: ${dateStr}`, 105, 28, { align: "center" });
+        doc.text(`Généré le ${dateStr}`, 45, 38);
 
-        // Meta Info
+        // Meta Info Section
         doc.setTextColor(0);
         doc.setFontSize(11);
-        doc.text(`Auditeur: ${meta.auditor || 'Utilisateur'}`, 14, 50);
-        doc.text(`Statut: ${messageStatus(meta.discrepancyCount)}`, 14, 56);
+        doc.text(`Auditeur: ${meta.auditor || 'Utilisateur'}`, 14, 60);
+        doc.text(`Statut: ${messageStatus(meta.discrepancyCount)}`, 14, 66);
 
         // Stats Box
         doc.setDrawColor(200);
         doc.setFillColor(248, 250, 252);
-        doc.roundedRect(140, 45, 56, 20, 3, 3, 'FD');
+        doc.roundedRect(140, 55, 56, 20, 3, 3, 'FD');
         doc.setFontSize(10);
-        doc.text(`Total Références: ${meta.totalItems || items.length}`, 145, 52);
+        doc.text(`Total Références: ${meta.totalItems || items.length}`, 145, 62);
 
         if (meta.discrepancyCount > 0) {
             doc.setTextColor(239, 68, 68);
-            doc.text(`Écarts: ${meta.discrepancyCount}`, 145, 59);
+            doc.text(`Écarts: ${meta.discrepancyCount}`, 145, 69);
         } else {
             doc.setTextColor(16, 185, 129);
-            doc.text(`Écarts: 0 (Parfait)`, 145, 59);
+            doc.text(`Écarts: 0 (Parfait)`, 145, 69);
         }
         doc.setTextColor(0);
 
@@ -186,7 +203,7 @@ const Audit = () => {
         autoTable(doc, {
             head: [tableColumn],
             body: tableRows,
-            startY: 70,
+            startY: 80,
             styles: { fontSize: 9, cellPadding: 3 },
             headStyles: { fillColor: [71, 85, 105], textColor: 255 },
             alternateRowStyles: { fillColor: [241, 245, 249] },
