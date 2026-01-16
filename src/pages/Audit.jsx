@@ -549,12 +549,12 @@ const Audit = () => {
                                     </tr>
                                     {/* Empty Vial Row for Narcotics */}
                                     {item.isNarcotic && (
-                                        <tr key={`${item.id}-vials`} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', backgroundColor: 'rgba(168, 85, 247, 0.05)' }}>
-                                            <td style={{ padding: '0.5rem 0.5rem 0.5rem 2rem', fontSize: '0.85rem', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                <span>💊 Ampoules Vides</span>
+                                        <tr key={`${item.id}-vials`} style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}>
+                                            <td style={{ padding: '0.5rem 0.5rem 0.5rem 2.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                                Ampoules vides
                                             </td>
                                             {/* Expected Column (Aligned with Theoretical) */}
-                                            <td style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', verticalAlign: 'middle' }}>
+                                            <td style={{ textAlign: 'center', fontSize: '0.9rem', verticalAlign: 'middle', color: 'var(--text-secondary)' }}>
                                                 {item.expectedEmptyVials ?? 0}
                                             </td>
                                             {/* Physical Input Column */}
@@ -565,15 +565,15 @@ const Audit = () => {
                                                     style={{
                                                         textAlign: 'center',
                                                         fontSize: '0.85rem',
-                                                        background: 'rgba(168, 85, 247, 0.1)',
-                                                        borderColor: 'rgba(168, 85, 247, 0.3)',
+                                                        background: 'transparent',
+                                                        borderColor: 'rgba(255, 255, 255, 0.1)',
                                                         width: '80px',
                                                         margin: '0 auto',
                                                         padding: '0.3rem'
                                                     }}
                                                     value={item.physicalEmptyVials ?? ''}
                                                     onChange={(e) => handleEmptyVialsChange(item.id, e.target.value)}
-                                                    placeholder="Comptées"
+                                                    placeholder="0"
                                                     min="0"
                                                 />
                                             </td>
@@ -595,7 +595,7 @@ const Audit = () => {
                                             </td>
                                             {/* Comment Column */}
                                             <td style={{ padding: '0.5rem', fontSize: '0.75rem', fontStyle: 'italic', color: 'var(--text-secondary)', verticalAlign: 'middle' }}>
-                                                Ampoules vidées conservées pour contrôle
+                                                Ampoules vidées pour contrôle
                                             </td>
                                         </tr>
                                     )}
