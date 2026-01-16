@@ -550,8 +550,13 @@ const Audit = () => {
                                     {/* Empty Vial Row for Narcotics */}
                                     {item.isNarcotic && (
                                         <tr key={`${item.id}-vials`} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', backgroundColor: 'rgba(168, 85, 247, 0.05)' }}>
-                                            <td colSpan="2" style={{ padding: '0.5rem 0.5rem 0.5rem 2rem', fontSize: '0.85rem', color: 'var(--accent-primary)' }}>
-                                                💊 Ampoules Vides (Stupéfiant)
+                                            <td colSpan="2" style={{ padding: '0.5rem 0.5rem 0.5rem 2rem', fontSize: '0.85rem', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    💊 Ampoules Vides
+                                                </span>
+                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                                                    Attendues : <strong>{item.expectedEmptyVials ?? 0}</strong>
+                                                </span>
                                             </td>
                                             <td style={{ textAlign: 'center', padding: '0.5rem' }}>
                                                 <input
@@ -572,13 +577,26 @@ const Audit = () => {
                                                     min="0"
                                                 />
                                             </td>
-                                            <td style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                                                -
+                                            <td style={{ textAlign: 'center', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                                                {(() => {
+                                                    const expected = item.expectedEmptyVials ?? 0;
+                                                    const physical = item.physicalEmptyVials;
+                                                    if (physical !== null && physical !== undefined) {
+                                                        const gap = physical - expected;
+                                                        return (
+                                                            <span style={{ color: gap !== 0 ? 'var(--accent-warning)' : 'var(--accent-success)' }}>
+                                                                {gap > 0 ? '+' : ''}{gap}
+                                                            </span>
+                                                        );
+                                                    }
+                                                    return <span style={{ color: 'var(--text-secondary)' }}>-</span>;
+                                                })()}
                                             </td>
                                             <td style={{ padding: '0.5rem', fontSize: '0.75rem', fontStyle: 'italic', color: 'var(--text-secondary)' }}>
                                                 Ampoules vidées conservées pour contrôle
                                             </td>
                                         </tr>
+                                    )}
                                     )}
                                 </React.Fragment>
                             ))}
