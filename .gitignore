@@ -13,7 +13,8 @@ dist-ssr
 *.local
 
 # Environment variables
-.env
+# .env is committed (contains public anon keys for production)
+# .env.local and variants are private (local development)
 .env.local
 .env.*.local
 
